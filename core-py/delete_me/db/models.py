@@ -64,7 +64,23 @@ class Case(SQLModel, table=True):
     sent_at: datetime | None = None
     response_received_at: datetime | None = None
     audit_due_at: datetime | None = Field(default=None, index=True)
+    last_audited_at: datetime | None = None
 
     transport_message_id: str | None = None
     last_error: str | None = None
     evidence_path: str | None = None
+
+
+class AuditResult(SQLModel, table=True):
+    __tablename__ = "audit_results"
+
+    id: int | None = Field(default=None, primary_key=True)
+    case_id: int = Field(foreign_key="cases.id", index=True)
+    source: str = Field(index=True)
+    checked_at: datetime = Field(default_factory=_now, index=True)
+    found: bool
+    inconclusive: bool = False
+    listings_url: str | None = None
+    evidence_html_path: str | None = None
+    screenshot_path: str | None = None
+    notes: str | None = None

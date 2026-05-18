@@ -120,7 +120,7 @@ def send_case(
     if case.status not in (CaseStatus.DRAFT, CaseStatus.FAILED):
         raise ValueError(f"case #{case.id} is in status {case.status}, not sendable")
 
-    broker = _broker_for_case(case)
+    broker = broker_for_case(case)
     if broker.user_submit_only or not broker.accepts_authorized_agent:
         raise ValueError(
             f"broker {broker.id} is user-submit-only; this case cannot be sent by the tool"
@@ -163,7 +163,7 @@ def send_case(
     return result
 
 
-def _broker_for_case(case: Case) -> Broker:
+def broker_for_case(case: Case) -> Broker:
     brokers = {b.id: b for b in load_brokers()}
     if case.broker_id not in brokers:
         raise ValueError(f"case references unknown broker {case.broker_id!r}")

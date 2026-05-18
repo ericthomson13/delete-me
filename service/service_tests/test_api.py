@@ -88,3 +88,42 @@ def test_cannot_send_user_submit_only_broker(client: TestClient):
     r = client.post(f"/cases/{case['id']}/send", json={"live": False})
     assert r.status_code == 400
     assert "user-submit-only" in r.json()["detail"]
+
+
+def test_audit_endpoint_marks_noncompliant(client: TestClient, monkeypatch: pytest.MonkeyPatch):
+    """Audit endpoint with a mock adapter aliased to the broker's audit_source."""
+    monkeypatch.setenv("DELETE_ME_AUDIT_USE_MOCK", "true")
+
+    from delete_me.audit import MockAuditAdapter, found_fixture
+    from service.api import audits as audits_module
+
+    monkeypatch.setattr(
+        audits_module,
+        "default_registry",
+        lambda: {
+            "spokeo_search": MockAuditAdapter(
+                source_id="spokeo_search",
+                fixtures={"audit user": found_fixture()},
+                inconclusive_for_unknown=False,
+            )
+        },
+    )
+
+    pr = client.post(
+        "/profiles",
+        json={"full_legal_name": "Audit User", "current_address": "1 First St, Portland, OR"},
+    ).json()
+    case = client.post(
+        "/cases", json={"profile_id": pr["id"], "broker_id": "spokeo"}
+    ).json()
+
+    r = client.post(f"/cases/{case['id']}/audit")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["case"]["status"] == "noncompliant"
+    assert len(body["results"]) == 1
+    assert body["results"][0]["found"] is True
+
+    r = client.get(f"/cases/{case['id']}/audits")
+    assert r.status_code == 200
+    assert len(r.json()) == 1

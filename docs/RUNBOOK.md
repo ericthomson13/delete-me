@@ -29,7 +29,7 @@ validator (intentional, to keep the GitHub Actions footprint light).
 
 ```sh
 uv run delete-me --help
-uv run pytest -q                 # 17 passing as of Phase 1
+uv run pytest -q                 # 29 passing as of MVP (Phase 3 shipped)
 uv run ruff check                # clean
 uv run delete-me validate-registry
 ```
@@ -63,6 +63,14 @@ uv run delete-me case-create --broker spokeo
 uv run delete-me cases
 uv run delete-me send --case 1            # dry-run
 uv run delete-me cases                    # should show status=sent_dry_run
+
+# Audit (will likely be inconclusive — no Spokeo adapter wired in production):
+uv run delete-me audit --case 1
+uv run delete-me cases                    # status updates per audit verdict
+
+# If audit comes back noncompliant, build the evidence package:
+uv run delete-me evidence --case 1 --out /tmp/evidence
+ls /tmp/evidence/case-1
 unset DELETE_ME_DB_URL
 ```
 
@@ -91,7 +99,17 @@ cp docker/.env.example docker/.env
 docker compose -f docker/docker-compose.yml --env-file docker/.env up -d --build
 # first build: 1-3 minutes
 docker compose -f docker/docker-compose.yml --env-file docker/.env logs -f service &
+docker compose -f docker/docker-compose.yml --env-file docker/.env logs -f scheduler &
 curl http://localhost:8080/health
+# Drive the full flow:
+curl -X POST http://localhost:8080/profiles -H "content-type: application/json" \
+    -d '{"full_legal_name":"Test","current_address":"123 Main St, Portland, OR"}'
+curl -X POST http://localhost:8080/cases -H "content-type: application/json" \
+    -d '{"profile_id":1,"broker_id":"spokeo"}'
+curl -X POST http://localhost:8080/cases/1/send -H "content-type: application/json" -d '{"live":false}'
+curl -X POST http://localhost:8080/cases/1/audit
+curl -X POST http://localhost:8080/cases/1/evidence
+curl -OJ http://localhost:8080/cases/1/evidence/download
 # tear down when done:
 docker compose -f docker/docker-compose.yml --env-file docker/.env down
 # add -v to wipe the Postgres volume:

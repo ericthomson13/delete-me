@@ -22,9 +22,12 @@ import jsonschema
 from pydantic import ValidationError
 
 from delete_me.agent_form import generate_designation
+from delete_me.audit import AuditOrchestrator
+from delete_me.audit.orchestrator import production_registry
 from delete_me.cases import case_as_dict, draft_case, list_cases, send_case, upsert_profile
 from delete_me.db import Case
 from delete_me.db.session import default_db_url, get_session, init_db
+from delete_me.evidence import PackageBuilder
 from delete_me.letters import LetterEngine
 from delete_me.letters.engine import ConsumerProfile
 from delete_me.registry import load_brokers, load_statutes
@@ -291,6 +294,91 @@ def send_cmd(case_id: int, live: bool) -> None:
             sys.exit(2)
 
         click.echo(json.dumps({"case": case_as_dict(case), "dry_run": result.dry_run}, indent=2))
+
+
+@main.command("audit")
+@click.option("--case", "case_id", required=True, type=int)
+def audit_cmd(case_id: int) -> None:
+    """Run the audit pipeline immediately against one case."""
+    init_db()
+    orch = AuditOrchestrator.from_registry(production_registry())
+    with get_session() as session:
+        case = session.get(Case, case_id)
+        if not case:
+            click.echo(f"error: case {case_id} not found", err=True)
+            sys.exit(2)
+        results = orch.audit_case(session, case)
+    click.echo(
+        json.dumps(
+            {
+                "case": case_as_dict(case),
+                "results": [
+                    {
+                        "source": r.source,
+                        "found": r.found,
+                        "inconclusive": r.inconclusive,
+                        "listings_url": r.listings_url,
+                        "notes": r.notes,
+                    }
+                    for r in results
+                ],
+            },
+            indent=2,
+        )
+    )
+
+
+@main.command("evidence")
+@click.option("--case", "case_id", required=True, type=int)
+@click.option(
+    "--out",
+    "out_dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=Path("./evidence"),
+    show_default=True,
+)
+def evidence_cmd(case_id: int, out_dir: Path) -> None:
+    """Build a non-compliance evidence package for one case."""
+    init_db()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    builder = PackageBuilder(out_dir=out_dir)
+    with get_session() as session:
+        case = session.get(Case, case_id)
+        if not case:
+            click.echo(f"error: case {case_id} not found", err=True)
+            sys.exit(2)
+        pkg = builder.build(session, case)
+    click.echo(
+        json.dumps(
+            {
+                "case_id": pkg.case_id,
+                "directory": str(pkg.directory),
+                "zip": str(pkg.zip_path),
+                "manifest": str(pkg.manifest_path),
+                "file_count": len(pkg.files),
+            },
+            indent=2,
+        )
+    )
+
+
+@main.command("audit-due")
+@click.option("--limit", default=20, type=int, show_default=True)
+def audit_due_cmd(limit: int) -> None:
+    """Run the audit pipeline against every case whose audit_due_at has passed."""
+    init_db()
+    orch = AuditOrchestrator.from_registry(production_registry())
+    summary = []
+    with get_session() as session:
+        due = orch.cases_due(session, limit=limit)
+        for case in due:
+            try:
+                orch.audit_case(session, case)
+            except Exception as exc:  # noqa: BLE001 — keep the sweep going
+                click.echo(f"case {case.id}: audit error: {exc}", err=True)
+                continue
+            summary.append(case_as_dict(case))
+    click.echo(json.dumps({"audited": summary, "count": len(summary)}, indent=2))
 
 
 if __name__ == "__main__":  # pragma: no cover

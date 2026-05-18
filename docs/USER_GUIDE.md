@@ -108,6 +108,44 @@ uv run delete-me send --case 1 --live
 
 You must pass `--live` per send. There is no global "always live" switch.
 
+### 9. Audit (after ~60 days)
+
+```sh
+uv run delete-me audit --case 1
+# Or sweep all cases past their audit_due_at:
+uv run delete-me audit-due
+```
+
+The audit pipeline runs read-only public searches on the sources configured
+for the broker. If you're still listed, the case status becomes
+`noncompliant`. If you're not listed and the source returned conclusively,
+status becomes `deleted_confirmed`. Anything else is `audit_inconclusive`
+and the tool will re-try on the next sweep.
+
+### 10. Build an evidence package (on noncompliance)
+
+```sh
+uv run delete-me evidence --case 1 --out ./evidence
+# Produces ./evidence/case-1/ and ./evidence/case-1.zip
+```
+
+The directory contains:
+
+- `01-original-letter.md` — the deletion letter we sent
+- `02-agent-designation.md` — the scoped authorized-agent designation
+- `03-send-receipt.json` — when we sent, message ID, etc.
+- `04-audit-evidence/` — per-source JSON + any captured HTML/screenshots
+- `05-statute-citations.md` — the statutes invoked
+- `06-ca-ag-complaint-DRAFT.md` — **draft, not a submission.** Review,
+  then file via the OFFICIAL form at
+  https://oag.ca.gov/contact/consumer-complaint-against-business-or-company
+- `07-attorney-referrals.md` — pointers to NACA and state bar lookups
+- `MANIFEST.json` — index of everything in the package
+
+Attach the zip when filing the CA AG complaint, or hand it to a
+plaintiff-side privacy attorney via the directories in
+`07-attorney-referrals.md`.
+
 ---
 
 ## Path B — docker-compose self-host
@@ -178,6 +216,35 @@ restart with `docker compose ... up -d`, then:
 curl -X POST http://localhost:8080/cases/1/send \
     -H "content-type: application/json" \
     -d '{"live": true}'
+```
+
+### 8. Audit + evidence (HTTP)
+
+```sh
+# Run the audit pipeline immediately:
+curl -X POST http://localhost:8080/cases/1/audit
+
+# Sweep all due cases (the scheduler container does this automatically once
+# per AUDIT_INTERVAL_SECONDS; this endpoint is for ad-hoc triggers):
+curl -X POST 'http://localhost:8080/audits/sweep?limit=100'
+
+# Inspect audit history for a case:
+curl http://localhost:8080/cases/1/audits
+
+# Build an evidence package (saves to DELETE_ME_EVIDENCE_DIR, default
+# /var/lib/delete-me/evidence inside the container):
+curl -X POST http://localhost:8080/cases/1/evidence
+
+# Download the zip:
+curl -OJ http://localhost:8080/cases/1/evidence/download
+```
+
+The docker-compose stack also runs a separate `scheduler` container that
+invokes `delete-me audit-due --limit 100` on a configurable interval
+(default 24h via `AUDIT_INTERVAL_SECONDS`). Inspect it with:
+
+```sh
+docker compose -f docker/docker-compose.yml --env-file docker/.env logs -f scheduler
 ```
 
 ---

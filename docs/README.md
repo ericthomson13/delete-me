@@ -25,10 +25,15 @@ That approach is a graveyard — see
 |---|---|---|
 | 0 — Foundation (registry, letter engine, agent form, CLI) | **shipped** | `uv run delete-me` |
 | 1 — Service + Send (FastAPI, SQLModel, Postmark, docker) | **shipped** | `docker compose up` |
-| 2 — Audit MVP (5 sources, 60-day scheduler) | roadmap | |
-| 3 — Evidence Package | roadmap | |
+| 2 — Audit MVP (orchestrator, mock + experimental real adapter, sweeper) | **shipped** | `delete-me audit-due` |
+| 3 — Evidence Package (zip with letter, audit findings, CA AG draft) | **shipped** | `delete-me evidence --case N` |
 | 4 — Tauri Desktop | roadmap | |
 | 5+ — Eastern States, DROP, GDPR | roadmap | |
+
+**MVP is shipped as of this commit.** A user can: capture a profile,
+generate signed letters, dry-run or live-send them, audit ~60 days later,
+and (on noncompliance) build an evidence package they can take to the CA
+AG or a private attorney.
 
 Full roadmap: [`architecture/PHASES.md`](architecture/PHASES.md).
 
@@ -49,6 +54,8 @@ uv run delete-me init \
 uv run delete-me db-init
 uv run delete-me case-create --broker spokeo
 uv run delete-me send --case 1     # dry-run by default
+uv run delete-me audit --case 1    # check whether the broker actually complied
+uv run delete-me evidence --case 1 # if noncompliant, build the evidence zip
 ```
 
 **docker-compose self-host:**

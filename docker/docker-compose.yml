@@ -28,6 +28,33 @@ services:
       - "${SERVICE_PORT:-8080}:8080"
     restart: unless-stopped
 
+  scheduler:
+    # Runs `delete-me audit-due` once every AUDIT_INTERVAL_SECONDS. Lightweight
+    # alternative to arq for Phase 2; we can switch to arq when audit volume
+    # justifies a real queue.
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.service
+    image: delete-me/service:phase-1
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DELETE_ME_DB_URL: postgresql+psycopg://delete_me:${POSTGRES_PASSWORD}@db:5432/delete_me
+      DELETE_ME_LOG_LEVEL: ${DELETE_ME_LOG_LEVEL:-INFO}
+      POSTMARK_SERVER_TOKEN: ${POSTMARK_SERVER_TOKEN:-}
+      DELETE_ME_FROM_ADDRESS: ${DELETE_ME_FROM_ADDRESS:-delete-me-agent@invalid.example}
+      AUDIT_INTERVAL_SECONDS: ${AUDIT_INTERVAL_SECONDS:-86400}
+    entrypoint: ["/bin/sh", "-lc"]
+    command:
+      - >
+        echo "[scheduler] audit interval: $$AUDIT_INTERVAL_SECONDS seconds";
+        while true; do
+          delete-me audit-due --limit 100 || echo "[scheduler] audit-due failed (continuing)";
+          sleep $$AUDIT_INTERVAL_SECONDS;
+        done
+    restart: unless-stopped
+
   db:
     image: postgres:16-alpine
     environment:
