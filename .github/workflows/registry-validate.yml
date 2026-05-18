@@ -1,0 +1,68 @@
+# Validates every broker YAML in registry/brokers/ against the JSON Schema.
+# This is the ONLY workflow that runs on every PR — it gates the easy-PR
+# path (adding a broker) so a non-coder can't merge a malformed entry.
+#
+# Tests and lint are deliberately not part of CI; they live in the local
+# pre-push hook (see scripts/install-hooks.sh). This keeps our GH Actions
+# footprint minimal. The full test job is below, commented out, so we can
+# enable it later without re-deriving it.
+name: registry-validate
+
+on:
+  pull_request:
+    paths:
+      - "registry/**"
+      - "legal/statute_citations.yaml"
+      - ".github/workflows/registry-validate.yml"
+  push:
+    branches: [main]
+    paths:
+      - "registry/**"
+      - "legal/statute_citations.yaml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Sync deps
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv sync
+      - name: Validate broker registry
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run delete-me validate-registry
+
+  # ---------------------------------------------------------------------------
+  # Tests + lint run on the local pre-push hook (scripts/install-hooks.sh).
+  # The job below stays here, commented out, so we can flip it on when the
+  # project grows large enough that the local hook isn't sufficient.
+  #
+  # tests:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.12"
+  #     - name: Install uv
+  #       run: curl -LsSf https://astral.sh/uv/install.sh | sh
+  #     - name: Sync deps (with dev)
+  #       run: |
+  #         export PATH="$HOME/.local/bin:$PATH"
+  #         uv sync --extra dev
+  #     - name: Ruff
+  #       run: |
+  #         export PATH="$HOME/.local/bin:$PATH"
+  #         uv run ruff check
+  #     - name: Pytest
+  #       run: |
+  #         export PATH="$HOME/.local/bin:$PATH"
+  #         uv run pytest -q
+  # ---------------------------------------------------------------------------

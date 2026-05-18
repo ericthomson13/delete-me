@@ -1,0 +1,27 @@
+id: fastpeoplesearch
+name: FastPeopleSearch.com
+website: https://www.fastpeoplesearch.com
+tier: long_tail
+opt_out:
+  methods: [web_form]
+  web_form: https://www.fastpeoplesearch.com/removal
+  drop_registered: true
+accepts_authorized_agent: false
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - email
+re_aggregation_days: 30
+audit_sources:
+  - fastpeoplesearch_search
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+last_verified: 2026-05-18
+maintainer: "@ericthomson13"
+notes: |
+  Does NOT accept authorized-agent letters as of last verification. Tool
+  generates a consumer-direct request the user must submit themselves via the
+  web form. Re-aggregation here is fast (often within 30 days) — audit is
+  especially important to flag relisting.

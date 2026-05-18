@@ -1,0 +1,30 @@
+id: spokeo
+name: Spokeo, Inc.
+website: https://www.spokeo.com
+tier: people_search
+opt_out:
+  methods: [web_form, email]
+  email: privacy@spokeo.com
+  web_form: https://www.spokeo.com/optout
+  drop_registered: true
+  instructions_url: https://www.spokeo.com/optout
+accepts_authorized_agent: true
+agent_form_requirements:
+  - signed_permission
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - email
+  - prior_addresses
+re_aggregation_days: 45
+audit_sources:
+  - spokeo_search
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+last_verified: 2026-05-18
+maintainer: "@ericthomson13"
+notes: |
+  Email opt-outs sometimes require a follow-up click-through link sent to the
+  consumer email; if no email is on file, web_form is more reliable.

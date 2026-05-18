@@ -1,0 +1,119 @@
+# Machine-readable statute citations referenced by registry/brokers/*.yaml.
+# Slugs are stable; the broker registry references these keys.
+# Validated against registry/schemas/statute.schema.json.
+
+ccpa_1798_105:
+  jurisdiction: US-CA
+  short_name: CCPA right to delete
+  citation: Cal. Civ. Code §1798.105
+  right_description: |
+    A consumer has the right to request that a business delete any personal
+    information about the consumer which the business has collected from the
+    consumer. The business must delete and direct any service providers to
+    delete the information unless an enumerated exception applies.
+  private_right_of_action: false
+  url: https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.105
+
+ccpa_1798_120:
+  jurisdiction: US-CA
+  short_name: CCPA right to opt-out of sale/sharing
+  citation: Cal. Civ. Code §1798.120
+  right_description: |
+    A consumer has the right, at any time, to direct a business that sells or
+    shares personal information about the consumer to third parties not to
+    sell or share the consumer's personal information.
+  private_right_of_action: false
+  url: https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.120
+
+ccpa_1798_140_authorized_agent:
+  jurisdiction: US-CA
+  short_name: CCPA authorized agent definition
+  citation: Cal. Civ. Code §1798.140(d) and 11 CCR §7063
+  right_description: |
+    A consumer may designate an authorized agent to submit deletion and
+    opt-out requests on the consumer's behalf via signed written permission.
+    A business may require the consumer to verify their own identity directly,
+    but may not require a full Power of Attorney.
+  private_right_of_action: false
+  url: https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.140
+
+ca_delete_act:
+  jurisdiction: US-CA
+  short_name: California Delete Act (SB 362) / DROP registry
+  citation: Cal. Civ. Code §§1798.99.80–1798.99.89
+  right_description: |
+    California residents may submit a single deletion request through the
+    CalPrivacy Delete Request and Opt-Out Platform (DROP) that all registered
+    data brokers must honor on a recurring 45-day cadence beginning
+    August 1, 2026.
+  penalty: |
+    $200 per request per day of noncompliance; triennial third-party audits
+    begin in 2028.
+  private_right_of_action: false
+  url: https://privacy.ca.gov/drop/
+
+ny_shield_act:
+  jurisdiction: US-NY
+  short_name: NY SHIELD Act
+  citation: NY Gen. Bus. Law §899-bb
+  right_description: |
+    Requires businesses that own or license private information of a New York
+    resident to implement reasonable safeguards and respond to consumer data
+    inquiries.
+  private_right_of_action: false
+  url: https://www.nysenate.gov/legislation/laws/GBS/899-BB
+
+va_cdpa:
+  jurisdiction: US-VA
+  short_name: Virginia Consumer Data Protection Act
+  citation: Va. Code §§59.1-575 et seq.
+  right_description: |
+    Provides Virginia consumers a right to delete personal data and to opt out
+    of sale or targeted advertising.
+  private_right_of_action: false
+  url: https://law.lis.virginia.gov/vacodefull/title59.1/chapter53/
+
+co_cpa:
+  jurisdiction: US-CO
+  short_name: Colorado Privacy Act
+  citation: Colo. Rev. Stat. §6-1-1301 et seq.
+  right_description: |
+    Provides Colorado consumers a right to delete and to opt out of sale,
+    targeted advertising, and certain profiling.
+  private_right_of_action: false
+  url: https://leg.colorado.gov/sites/default/files/2021a_190_signed.pdf
+
+ct_ctdpa:
+  jurisdiction: US-CT
+  short_name: Connecticut Data Privacy Act
+  citation: Conn. Pub. Acts No. 22-15
+  right_description: |
+    Provides Connecticut consumers a right to delete and to opt out of sale,
+    targeted advertising, and profiling.
+  private_right_of_action: false
+  url: https://www.cga.ct.gov/2022/ACT/PA/PDF/2022PA-00015-R00SB-00006-PA.PDF
+
+gdpr_article_17:
+  jurisdiction: EU
+  short_name: GDPR right to erasure (the right to be forgotten)
+  citation: Regulation (EU) 2016/679, Article 17
+  right_description: |
+    A data subject has the right to obtain from the controller the erasure of
+    personal data concerning them without undue delay, subject to enumerated
+    grounds.
+  penalty: |
+    Up to €20,000,000 or 4% of total worldwide annual turnover, whichever is
+    higher (Art. 83(5)).
+  private_right_of_action: true
+  url: https://gdpr-info.eu/art-17-gdpr/
+
+e_sign_act:
+  jurisdiction: US-federal
+  short_name: Electronic Signatures in Global and National Commerce Act
+  citation: 15 U.S.C. §7001
+  right_description: |
+    An electronic signature shall not be denied legal effect solely because it
+    is in electronic form, where the signer intends to authenticate the
+    record.
+  private_right_of_action: false
+  url: https://www.govinfo.gov/content/pkg/USCODE-2010-title15/pdf/USCODE-2010-title15-chap96-subchapI-sec7001.pdf

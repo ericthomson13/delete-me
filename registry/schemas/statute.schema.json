@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/extra-terrestrial-designs/delete-me/registry/schemas/statute.schema.json",
+  "title": "Statute citation",
+  "description": "Machine-readable citation referenced by broker.statutes[]. legal/statute_citations.yaml is a map of {slug: Statute}.",
+  "type": "object",
+  "required": ["jurisdiction", "short_name", "citation", "right_description"],
+  "additionalProperties": false,
+  "properties": {
+    "jurisdiction": {
+      "type": "string",
+      "description": "US-CA, US-NY, US-federal, EU, UK-GB, etc."
+    },
+    "short_name": {
+      "type": "string",
+      "description": "Human-readable name (e.g., 'CCPA right to delete')."
+    },
+    "citation": {
+      "type": "string",
+      "description": "Formal citation (e.g., 'Cal. Civ. Code §1798.105')."
+    },
+    "right_description": {
+      "type": "string",
+      "description": "Plain-English description of the right being invoked."
+    },
+    "penalty": {
+      "type": "string",
+      "description": "Plain-English penalty schedule if applicable."
+    },
+    "private_right_of_action": {
+      "type": "boolean",
+      "description": "Whether consumers can sue directly under this statute."
+    },
+    "url": {
+      "type": "string",
+      "format": "uri"
+    }
+  }
+}

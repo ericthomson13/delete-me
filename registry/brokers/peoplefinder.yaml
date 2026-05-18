@@ -1,0 +1,26 @@
+id: peoplefinder
+name: PeopleFinders, LLC
+website: https://www.peoplefinders.com
+tier: people_search
+opt_out:
+  methods: [web_form, email]
+  email: privacy@peoplefinders.com
+  web_form: https://www.peoplefinders.com/opt-out
+  drop_registered: true
+accepts_authorized_agent: true
+agent_form_requirements:
+  - signed_permission
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - email
+  - prior_addresses
+re_aggregation_days: 45
+audit_sources:
+  - peoplefinder_search
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+last_verified: 2026-05-18
+maintainer: "@ericthomson13"

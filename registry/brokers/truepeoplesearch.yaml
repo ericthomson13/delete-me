@@ -1,0 +1,25 @@
+id: truepeoplesearch
+name: TruePeopleSearch.com
+website: https://www.truepeoplesearch.com
+tier: long_tail
+opt_out:
+  methods: [web_form]
+  web_form: https://www.truepeoplesearch.com/removal
+  drop_registered: true
+accepts_authorized_agent: false
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - email
+re_aggregation_days: 30
+audit_sources:
+  - truepeoplesearch_search
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+last_verified: 2026-05-18
+maintainer: "@ericthomson13"
+notes: |
+  Consumer must email-verify the removal request from an inbox they control.
+  Tool generates instructions; cannot complete the loop without inbox access.

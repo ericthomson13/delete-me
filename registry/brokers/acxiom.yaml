@@ -1,0 +1,36 @@
+id: acxiom
+name: Acxiom LLC
+website: https://www.acxiom.com
+parent_company: The Interpublic Group of Companies, Inc.
+tier: enterprise_aggregator
+opt_out:
+  methods: [email, postal]
+  email: privacy@acxiom.com
+  postal: "Acxiom LLC, Attn: Consumer Care, 301 E. Dave Ward Drive, Conway, AR 72032"
+  drop_registered: true
+  instructions_url: https://www.acxiom.com/about-us/privacy/
+accepts_authorized_agent: true
+agent_form_requirements:
+  - signed_permission
+  - government_id_redacted
+required_pii:
+  - full_name
+  - current_address
+  - prior_addresses
+  - dob_year
+optional_pii:
+  - email
+  - phone
+re_aggregation_days: 365
+audit_sources: []
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+last_verified: 2026-05-18
+maintainer: "@ericthomson13"
+notes: |
+  Enterprise aggregator — its data feeds many people-search sites downstream,
+  so opting out here has outsize value. Expects redacted government ID (DL or
+  passport) with the agent designation. No public people-search front-end, so
+  audit_sources is empty; verify removal by requesting a copy of the file 60
+  days later (separate flow, Phase 6+).

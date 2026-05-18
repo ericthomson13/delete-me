@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/extra-terrestrial-designs/delete-me/registry/schemas/broker.schema.json",
+  "title": "Data Broker",
+  "description": "Describes a single data broker for delete-me's letter and audit pipelines. One YAML file per broker under registry/brokers/.",
+  "type": "object",
+  "required": ["id", "name", "opt_out", "accepts_authorized_agent", "required_pii", "statutes", "last_verified", "maintainer"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Stable slug; matches filename. Lowercase, alnum + underscore. Never change after publish."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Legal name of the broker (e.g., 'Spokeo, Inc.')."
+    },
+    "website": {
+      "type": "string",
+      "format": "uri"
+    },
+    "parent_company": {
+      "type": "string",
+      "description": "If the broker is owned by a larger group (e.g., PeopleConnect for Intelius)."
+    },
+    "tier": {
+      "type": "string",
+      "enum": ["enterprise_aggregator", "people_search", "long_tail"],
+      "description": "Sensible tiering per the project plan."
+    },
+    "opt_out": {
+      "type": "object",
+      "required": ["methods"],
+      "additionalProperties": false,
+      "properties": {
+        "methods": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["email", "web_form", "postal", "drop", "phone"] },
+          "description": "Accepted opt-out channels, ORDERED by preference."
+        },
+        "email": { "type": "string", "format": "email" },
+        "web_form": { "type": "string", "format": "uri" },
+        "postal": { "type": "string", "description": "Mailing address as a single string." },
+        "phone": { "type": "string" },
+        "drop_registered": { "type": "boolean" },
+        "calprivacy_id": {
+          "type": "string",
+          "description": "California CalPrivacy data-broker registration ID."
+        },
+        "instructions_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Public-facing opt-out instructions page."
+        }
+      }
+    },
+    "accepts_authorized_agent": {
+      "type": "boolean",
+      "description": "Whether the broker accepts CCPA-style authorized-agent designations."
+    },
+    "agent_form_requirements": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "signed_permission",
+          "government_id_redacted",
+          "notarized",
+          "postal_only",
+          "company_letterhead"
+        ]
+      },
+      "uniqueItems": true,
+      "description": "Extra requirements the broker imposes on agent letters."
+    },
+    "required_pii": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "enum": [
+          "full_name",
+          "current_address",
+          "prior_addresses",
+          "dob_year",
+          "dob_full",
+          "email",
+          "phone",
+          "ssn_last_4"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "optional_pii": {
+      "type": "array",
+      "items": {
+        "enum": ["email", "phone", "prior_addresses", "ssn_last_4", "former_names"]
+      },
+      "uniqueItems": true
+    },
+    "re_aggregation_days": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Observed/typical days until the broker re-lists a previously removed user."
+    },
+    "audit_sources": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "description": "Identifiers of audit adapters (in core-py/delete_me/audit/sources/) used to verify removal."
+    },
+    "statutes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true,
+      "description": "Slugs into legal/statute_citations.yaml."
+    },
+    "letter_template": {
+      "type": "string",
+      "description": "Filename of the Jinja2 letter template to use (default: ccpa_authorized_agent.j2)."
+    },
+    "user_submit_only": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, this broker requires consumer-direct (e.g., notarized) submission; tool generates but does not send."
+    },
+    "last_verified": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO date the broker entry was last hand-verified by a maintainer."
+    },
+    "maintainer": {
+      "type": "string",
+      "pattern": "^@[A-Za-z0-9-]+$",
+      "description": "GitHub @handle of the broker entry's maintainer."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Free-form maintainer notes (quirks, gotchas)."
+    }
+  }
+}

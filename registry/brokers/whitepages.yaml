@@ -1,0 +1,29 @@
+id: whitepages
+name: Whitepages, Inc.
+website: https://www.whitepages.com
+tier: people_search
+opt_out:
+  methods: [web_form]
+  web_form: https://www.whitepages.com/suppression_requests
+  drop_registered: true
+  instructions_url: https://support.whitepages.com/hc/en-us/articles/115010106908
+accepts_authorized_agent: true
+agent_form_requirements:
+  - signed_permission
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - phone
+  - prior_addresses
+re_aggregation_days: 60
+audit_sources:
+  - whitepages_search
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+last_verified: 2026-05-18
+maintainer: "@ericthomson13"
+notes: |
+  No email opt-out channel; web form is the only direct path. Whitepages Premium
+  records may persist after free-tier removal — request explicit confirmation.

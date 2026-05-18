@@ -1,0 +1,31 @@
+id: intelius
+name: Intelius, LLC
+website: https://www.intelius.com
+parent_company: PeopleConnect, Inc.
+tier: people_search
+opt_out:
+  methods: [web_form, email]
+  email: privacy@intelius.com
+  web_form: https://suppression.peoplelookupcenter.com
+  drop_registered: true
+  instructions_url: https://www.intelius.com/optout
+accepts_authorized_agent: true
+agent_form_requirements:
+  - signed_permission
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - email
+  - prior_addresses
+re_aggregation_days: 45
+audit_sources:
+  - intelius_search
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+last_verified: 2026-05-18
+maintainer: "@ericthomson13"
+notes: |
+  PeopleConnect-family suppression portal also covers TruthFinder and Instant
+  Checkmate when the email matches a unified account. Confirm via case ID.

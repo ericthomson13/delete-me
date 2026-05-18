@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.uv/
+# uv.lock IS committed — delete-me is an application, not a library.
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# Rust / Tauri
+target/
+**/target/
+*.rlib
+.cargo/
+node_modules/
+tauri-app/ui/dist/
+tauri-app/ui/.svelte-kit/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Runtime artifacts (PII!) — never commit these
+profile.json
+out/
+*.pem
+*.key
+.env
+.env.*
+!.env.example
