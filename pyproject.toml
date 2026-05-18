@@ -22,15 +22,17 @@ dependencies = [
     "jsonschema>=4.21",
     "weasyprint>=62.0",
     "platformdirs>=4.2",
+    "sqlmodel>=0.0.16",
+    "httpx>=0.27",
 ]
 
 [project.optional-dependencies]
 service = [
     "fastapi>=0.110",
-    "sqlmodel>=0.0.16",
+    "uvicorn[standard]>=0.27",
     "arq>=0.25",
     "argon2-cffi>=23.1",
-    "httpx>=0.27",
+    "psycopg[binary]>=3.1",
 ]
 audit = ["playwright>=1.43"]
 dev = [
@@ -52,11 +54,12 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["core-py/delete_me"]
+packages = ["core-py/delete_me", "service/service"]
 
 [tool.hatch.build.targets.sdist]
 include = [
     "core-py",
+    "service",
     "registry",
     "legal",
     "docs",
@@ -69,6 +72,10 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "W"]
 
+[tool.ruff.lint.per-file-ignores]
+# FastAPI's canonical pattern is `Depends(get_session)` in argument defaults.
+"service/service/api/*.py" = ["B008"]
+
 [tool.pytest.ini_options]
-testpaths = ["core-py/tests"]
-pythonpath = ["core-py"]
+testpaths = ["core-py/tests", "service/service_tests"]
+pythonpath = ["core-py", "service"]

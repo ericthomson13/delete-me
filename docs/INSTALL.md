@@ -1,9 +1,11 @@
 # Install
 
-`delete-me` ships in three forms. Phase 0 (today) only ships the CLI; the
-other two are roadmap.
+`delete-me` ships in three forms. Phase 0–1 (today) deliver the CLI and the
+docker-compose self-host. The Tauri desktop app is roadmap (Phase 4).
 
-## Phase 0 — CLI (today)
+## Path A — CLI only (fastest)
+
+Use this if you just want to generate letters on your own machine.
 
 ### Prerequisites
 
@@ -27,6 +29,7 @@ sudo apt install python3.12
 git clone https://github.com/extra-terrestrial-designs/delete-me
 cd delete-me
 uv sync
+bash scripts/install-hooks.sh   # installs the pre-push hook
 uv run delete-me --help
 ```
 
@@ -38,19 +41,49 @@ need markdown output, skip this step.
 
 Then re-run `uv sync` and pass `--pdf` to `delete-me letters`.
 
-## Phase 1 — docker-compose (roadmap)
+## Path B — docker-compose self-host (Phase 1, today)
+
+Use this if you want the HTTP API too, or you want Postgres-backed case
+tracking instead of local SQLite.
+
+### Prerequisites
+
+- Docker 24+ and Docker Compose v2
+
+### Bring it up
 
 ```sh
 git clone https://github.com/extra-terrestrial-designs/delete-me
-cd delete-me/docker
-docker compose up -d
+cd delete-me
+
+cp docker/.env.example docker/.env
+# Edit docker/.env. At minimum set POSTGRES_PASSWORD to a strong random value.
+# Leave POSTMARK_SERVER_TOKEN blank to keep all sends in safe dry-run mode.
+
+docker compose -f docker/docker-compose.yml --env-file docker/.env up -d --build
 ```
 
-Browse to `http://localhost:8080`. The web UI walks you through profile,
-broker selection, and letter generation; PII is encrypted at rest with a
-passphrase you supply.
+First build takes 1–3 minutes (downloading Pango/Cairo). After that:
 
-## Phase 4 — Tauri desktop app (roadmap)
+```sh
+curl http://localhost:8080/health
+# {"status":"ok","version":"0.0.1"}
+```
+
+The interactive API docs are at http://localhost:8080/docs.
+
+### Going live (real Postmark sends)
+
+1. Verify a sending domain in [Postmark](https://account.postmarkapp.com).
+2. Set `POSTMARK_SERVER_TOKEN` and `DELETE_ME_FROM_ADDRESS` in `docker/.env`.
+3. `docker compose -f docker/docker-compose.yml --env-file docker/.env up -d`
+   to restart with new env.
+4. Pass `{"live": true}` to `POST /cases/{id}/send` or `--live` to the CLI.
+
+Even in "live" mode, you have to opt in per send. There is no global
+"always live" switch by design.
+
+## Path C — Tauri desktop app (Phase 4, roadmap)
 
 Download a signed installer for your OS from the
 [Releases page](https://github.com/extra-terrestrial-designs/delete-me/releases):
@@ -61,6 +94,15 @@ Download a signed installer for your OS from the
 
 In Tauri builds, your PII never leaves the device. Only signed letters and
 optional outbound email (Postmark) ever touch the network.
+
+## Where is my data?
+
+- CLI mode: a SQLite file under the platform's user-data dir
+  (macOS: `~/Library/Application Support/delete-me/delete-me.sqlite3`,
+  Linux: `~/.local/share/delete-me/...`).
+  Override with `DELETE_ME_DB_URL=sqlite:///./somewhere.db`.
+- docker mode: a named Postgres volume `delete-me-pg` on the docker host.
+  Override with `DELETE_ME_DB_URL=postgresql+psycopg://...`.
 
 ## Verifying a release
 

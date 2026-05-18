@@ -1,0 +1,47 @@
+# Self-host delete-me locally.
+#
+# Quickstart:
+#   cp docker/.env.example docker/.env
+#   # edit docker/.env, set POSTGRES_PASSWORD at minimum
+#   docker compose -f docker/docker-compose.yml --env-file docker/.env up -d
+#   curl http://localhost:8080/health
+#
+# To enable LIVE Postmark sends, set POSTMARK_SERVER_TOKEN in docker/.env.
+# Otherwise every send is dry-run, which is the safe default.
+
+services:
+  service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.service
+    image: delete-me/service:phase-1
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DELETE_ME_DB_URL: postgresql+psycopg://delete_me:${POSTGRES_PASSWORD}@db:5432/delete_me
+      DELETE_ME_LOG_LEVEL: ${DELETE_ME_LOG_LEVEL:-INFO}
+      DELETE_ME_CORS_ORIGINS: ${DELETE_ME_CORS_ORIGINS:-http://localhost:8080}
+      POSTMARK_SERVER_TOKEN: ${POSTMARK_SERVER_TOKEN:-}
+      DELETE_ME_FROM_ADDRESS: ${DELETE_ME_FROM_ADDRESS:-delete-me-agent@invalid.example}
+    ports:
+      - "${SERVICE_PORT:-8080}:8080"
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: delete_me
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: delete_me
+    volumes:
+      - delete-me-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U delete_me -d delete_me"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  delete-me-pg:

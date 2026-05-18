@@ -3,16 +3,16 @@
 Extracted from `PLAN.md`. Each phase is independently shippable. Effort
 estimates assume a single maintainer working part-time; revise as we learn.
 
-| Phase | Scope | Ships | Success criteria | Rough effort |
+| Phase | Status | Scope | Ships | Success criteria |
 |---|---|---|---|---|
-| **0 — Foundation** | Registry schema, 10 western-state brokers, letter engine, agent form, CLI only | `uv add delete-me`, PDFs to disk | Non-CA user produces 10 signed letters in <10 min | ~3 weeks |
-| **1 — Service + Send** | FastAPI, SQLModel, Postmark integration, case tracking | `docker compose up` | Letter sent + delivery receipt logged | ~3 weeks |
-| **2 — Audit MVP** | 5 audit sources, 60-day arq scheduler, "still listed?" report | Nightly auditor | 80%+ audit success on test personas | ~4 weeks |
-| **3 — Evidence Package** | Compliance PDF builder, pre-filled CA AG form, statute citations | One-click "escalate" | Package matches CA AG submission requirements | ~3 weeks |
-| **4 — Tauri Desktop** | Tauri v2 shell, embedded Python sidecar, signed builds | DMG + MSI + AppImage in Releases | Non-tech user installs without terminal | ~4 weeks |
-| **5 — Eastern States** | +25 brokers, NY SHIELD, VA CDPA, CO CPA, CT CTDPA templates | Registry grows | Coverage of top-50 US brokers | ~3 weeks |
-| **6 — DROP Integration** | CalPrivacy DROP submission path; aligned with 2026-08-01 enforcement | CA users submit via DROP from app | First DROP receipts logged | ~3 weeks |
-| **7 — GDPR/UK** | Art. 17 erasure templates, EU broker subset | EU launch | First successful Art. 17 erasure confirmed | ~4 weeks |
+| **0 — Foundation** | ✅ **shipped** | Registry schema, 10 western-state brokers, letter engine, agent form, CLI only | `uv run delete-me` | Non-CA user produces 10 signed letters in <10 min |
+| **1 — Service + Send** | ✅ **shipped** | FastAPI, SQLModel, Postmark integration (dry-run default), case tracking, docker-compose | `docker compose up` | Dry-run send persists a case with status `sent_dry_run` and an `audit_due_at` 60 days out |
+| **2 — Audit MVP** | pending | 5 audit sources, 60-day arq scheduler, "still listed?" report | Nightly auditor | 80%+ audit success on test personas |
+| **3 — Evidence Package** | pending | Compliance PDF builder, pre-filled CA AG form, statute citations | One-click "escalate" | Package matches CA AG submission requirements |
+| **4 — Tauri Desktop** | pending | Tauri v2 shell, embedded Python sidecar, signed builds | DMG + MSI + AppImage in Releases | Non-tech user installs without terminal |
+| **5 — Eastern States** | pending | +25 brokers, NY SHIELD, VA CDPA, CO CPA, CT CTDPA templates | Registry grows | Coverage of top-50 US brokers |
+| **6 — DROP Integration** | pending | CalPrivacy DROP submission path; aligned with 2026-08-01 enforcement | CA users submit via DROP from app | First DROP receipts logged |
+| **7 — GDPR/UK** | pending | Art. 17 erasure templates, EU broker subset | EU launch | First successful Art. 17 erasure confirmed |
 
 ## Phase 0 acceptance gate
 

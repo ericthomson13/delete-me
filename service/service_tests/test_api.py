@@ -1,0 +1,90 @@
+"""End-to-end FastAPI tests against an in-memory SQLite DB.
+
+These exercise the same code paths the CLI uses (delete_me.cases) so a green
+test suite proves both surfaces work.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+
+
+@pytest.fixture
+def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    monkeypatch.setenv("DELETE_ME_DB_URL", f"sqlite:///{tmp_path / 'test.db'}")
+    # Force a fresh import so create_app() uses the test DB URL.
+    import importlib
+
+    import service.app as service_app
+
+    importlib.reload(service_app)
+    return TestClient(service_app.create_app())
+
+
+def test_health(client: TestClient):
+    r = client.get("/health")
+    assert r.status_code == 200
+    assert r.json()["status"] == "ok"
+
+
+def test_list_brokers_returns_phase_0_ten(client: TestClient):
+    r = client.get("/brokers")
+    assert r.status_code == 200
+    ids = [b["id"] for b in r.json()]
+    assert len(ids) >= 10
+    assert "spokeo" in ids
+
+
+def test_create_profile_and_case_and_dry_run_send(client: TestClient):
+    r = client.post(
+        "/profiles",
+        json={
+            "full_legal_name": "Test User",
+            "current_address": "123 Main St, Portland OR 97201",
+            "dob_year": 1985,
+            "email": "test@example.com",
+            "prior_addresses": ["456 Old Rd, Seattle WA 98101"],
+        },
+    )
+    assert r.status_code == 200, r.text
+    profile_id = r.json()["id"]
+
+    r = client.post("/cases", json={"profile_id": profile_id, "broker_id": "spokeo"})
+    assert r.status_code == 200, r.text
+    case = r.json()
+    assert case["broker_id"] == "spokeo"
+    assert case["status"] == "draft"
+    assert "Spokeo" in case["letter_markdown"]
+    assert case["agent_designation_markdown"] is not None
+
+    case_id = case["id"]
+    r = client.post(f"/cases/{case_id}/send", json={"live": False})
+    assert r.status_code == 200, r.text
+    result = r.json()
+    assert result["result"]["dry_run"] is True
+    assert result["case"]["status"] == "sent_dry_run"
+    assert result["case"]["audit_due_at"] is not None
+
+    r = client.get("/cases")
+    assert r.status_code == 200
+    cases = r.json()
+    assert any(c["id"] == case_id and c["status"] == "sent_dry_run" for c in cases)
+
+
+def test_cannot_send_user_submit_only_broker(client: TestClient):
+    pr = client.post(
+        "/profiles",
+        json={
+            "full_legal_name": "Another User",
+            "current_address": "99 Pine Ave, Boise ID 83702",
+        },
+    ).json()
+    case = client.post(
+        "/cases", json={"profile_id": pr["id"], "broker_id": "fastpeoplesearch"}
+    ).json()
+    r = client.post(f"/cases/{case['id']}/send", json={"live": False})
+    assert r.status_code == 400
+    assert "user-submit-only" in r.json()["detail"]

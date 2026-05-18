@@ -22,10 +22,14 @@ import jsonschema
 from pydantic import ValidationError
 
 from delete_me.agent_form import generate_designation
+from delete_me.cases import case_as_dict, draft_case, list_cases, send_case, upsert_profile
+from delete_me.db import Case
+from delete_me.db.session import default_db_url, get_session, init_db
 from delete_me.letters import LetterEngine
 from delete_me.letters.engine import ConsumerProfile
 from delete_me.registry import load_brokers, load_statutes
 from delete_me.registry.loader import cross_check, validate_broker_file
+from delete_me.transport import PostmarkTransport
 
 
 @click.group()
@@ -213,6 +217,80 @@ def list_brokers() -> None:
         tier = b.tier or "—"
         agent = "agent" if b.accepts_authorized_agent and not b.user_submit_only else "user-submit"
         click.echo(f"{b.id:24}  {tier:22}  {agent:12}  {b.name}")
+
+
+@main.command("db-init")
+def db_init() -> None:
+    """Create local case-tracking tables if they don't exist. Idempotent."""
+    init_db()
+    click.echo(f"DB ready at {default_db_url()}")
+
+
+@main.command("case-create")
+@click.option(
+    "--profile",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=Path("./profile.json"),
+    show_default=True,
+)
+@click.option("--broker", "broker_id", required=True)
+def case_create(profile: Path, broker_id: str) -> None:
+    """Persist a profile, generate a letter for one broker, and store a Case."""
+    init_db()
+    consumer = _load_profile(profile)
+    with get_session() as session:
+        p = upsert_profile(session, consumer)
+        try:
+            case, designation = draft_case(session, p, broker_id)
+        except ValueError as exc:
+            click.echo(f"error: {exc}", err=True)
+            sys.exit(2)
+        click.echo(
+            f"case #{case.id} drafted for broker={case.broker_id} profile_id={p.id}"
+        )
+        if designation:
+            click.echo(f"agent designation sha256: {designation.document_sha256}")
+
+
+@main.command("cases")
+def cases_list() -> None:
+    """List local cases (most recent first)."""
+    init_db()
+    with get_session() as session:
+        items = sorted(list_cases(session), key=lambda c: c.created_at, reverse=True)
+        if not items:
+            click.echo("(no cases)")
+            return
+        for c in items:
+            sent = c.sent_at.strftime("%Y-%m-%d") if c.sent_at else "—"
+            click.echo(
+                f"#{c.id:<4} {c.broker_id:24}  status={c.status.value:18}  sent={sent}"
+            )
+
+
+@main.command("send")
+@click.option("--case", "case_id", required=True, type=int)
+@click.option(
+    "--live/--dry-run",
+    default=False,
+    help="Live send requires POSTMARK_SERVER_TOKEN. Dry-run by default.",
+)
+def send_cmd(case_id: int, live: bool) -> None:
+    """Send (or dry-run-send) a case's letter via Postmark."""
+    init_db()
+    transport = PostmarkTransport()
+    with get_session() as session:
+        case = session.get(Case, case_id)
+        if not case:
+            click.echo(f"error: case {case_id} not found", err=True)
+            sys.exit(2)
+        try:
+            result = send_case(session, case, transport, live=live)
+        except ValueError as exc:
+            click.echo(f"error: {exc}", err=True)
+            sys.exit(2)
+
+        click.echo(json.dumps({"case": case_as_dict(case), "dry_run": result.dry_run}, indent=2))
 
 
 if __name__ == "__main__":  # pragma: no cover

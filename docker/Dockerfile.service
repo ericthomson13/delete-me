@@ -1,0 +1,39 @@
+# delete-me FastAPI service image.
+#
+# Two-stage build: install deps with uv on a builder, then copy the venv into
+# a slim runtime. WeasyPrint's native libs (pango/cairo) ship in the runtime
+# stage so PDF rendering works inside the container.
+
+FROM python:3.12-slim AS builder
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential curl ca-certificates \
+        libpango-1.0-0 libpangoft2-1.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+ADD --chmod=755 https://astral.sh/uv/install.sh /tmp/uv-install.sh
+RUN /tmp/uv-install.sh && rm /tmp/uv-install.sh
+ENV PATH="/root/.local/bin:${PATH}"
+
+WORKDIR /app
+COPY pyproject.toml uv.lock README.md* ./
+COPY core-py ./core-py
+COPY service ./service
+COPY registry ./registry
+COPY legal ./legal
+COPY docs ./docs
+RUN uv sync --extra service --frozen --no-dev
+
+
+FROM python:3.12-slim AS runtime
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libpango-1.0-0 libpangoft2-1.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY --from=builder /app /app
+ENV PATH="/app/.venv/bin:${PATH}"
+ENV PYTHONPATH="/app/core-py:/app/service"
+
+EXPOSE 8080
+CMD ["uvicorn", "service.app:app", "--host", "0.0.0.0", "--port", "8080"]
