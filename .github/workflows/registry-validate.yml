@@ -19,6 +19,7 @@ on:
     paths:
       - "registry/**"
       - "legal/statute_citations.yaml"
+      - ".github/workflows/registry-validate.yml"
 
 jobs:
   validate:
