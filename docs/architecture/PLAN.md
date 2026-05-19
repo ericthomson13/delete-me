@@ -1,6 +1,6 @@
 # Plan: `delete-me` — Open-Source Data Broker Letter-Sender + DROP Audit Tool
 
-**Repo target:** `extra-terrestrial-designs/delete-me` (working name; alternatives: `vanish`, `optout-kit`)
+**Repo target:** `ericthomson13/delete-me` (working name; alternatives: `vanish`, `optout-kit`)
 **Maintainer:** `ericthomson13`
 **License:** AGPL-3.0 (copyleft prevents commercial fork-and-close)
 

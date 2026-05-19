@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/extra-terrestrial-designs/delete-me/registry/schemas/statute.schema.json",
+  "$id": "https://github.com/ericthomson13/delete-me/registry/schemas/statute.schema.json",
   "title": "Statute citation",
   "description": "Machine-readable citation referenced by broker.statutes[]. legal/statute_citations.yaml is a map of {slug: Statute}.",
   "type": "object",

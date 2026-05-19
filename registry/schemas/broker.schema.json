@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/extra-terrestrial-designs/delete-me/registry/schemas/broker.schema.json",
+  "$id": "https://github.com/ericthomson13/delete-me/registry/schemas/broker.schema.json",
   "title": "Data Broker",
   "description": "Describes a single data broker for delete-me's letter and audit pipelines. One YAML file per broker under registry/brokers/.",
   "type": "object",

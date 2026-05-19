@@ -42,7 +42,7 @@ Full roadmap: [`architecture/PHASES.md`](architecture/PHASES.md).
 **CLI on your laptop:**
 
 ```sh
-git clone https://github.com/extra-terrestrial-designs/delete-me
+git clone https://github.com/ericthomson13/delete-me
 cd delete-me
 uv sync
 

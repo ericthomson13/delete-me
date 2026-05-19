@@ -26,7 +26,7 @@ sudo apt install python3.12
 ### Install from source
 
 ```sh
-git clone https://github.com/extra-terrestrial-designs/delete-me
+git clone https://github.com/ericthomson13/delete-me
 cd delete-me
 uv sync
 bash scripts/install-hooks.sh   # installs the pre-push hook
@@ -53,7 +53,7 @@ tracking instead of local SQLite.
 ### Bring it up
 
 ```sh
-git clone https://github.com/extra-terrestrial-designs/delete-me
+git clone https://github.com/ericthomson13/delete-me
 cd delete-me
 
 cp docker/.env.example docker/.env
@@ -86,7 +86,7 @@ Even in "live" mode, you have to opt in per send. There is no global
 ## Path C — Tauri desktop app (Phase 4, roadmap)
 
 Download a signed installer for your OS from the
-[Releases page](https://github.com/extra-terrestrial-designs/delete-me/releases):
+[Releases page](https://github.com/ericthomson13/delete-me/releases):
 
 - **macOS** — `delete-me.dmg`
 - **Windows** — `delete-me.msi`

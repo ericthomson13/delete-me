@@ -10,7 +10,7 @@ maintaining or developing `delete-me`.
 
 ```sh
 brew install uv python@3.12    # macOS; on Linux see INSTALL.md
-git clone https://github.com/extra-terrestrial-designs/delete-me
+git clone https://github.com/ericthomson13/delete-me
 cd delete-me
 ```
 

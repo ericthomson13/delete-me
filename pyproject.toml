@@ -46,8 +46,8 @@ dev = [
 delete-me = "delete_me.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/extra-terrestrial-designs/delete-me"
-Issues = "https://github.com/extra-terrestrial-designs/delete-me/issues"
+Homepage = "https://github.com/ericthomson13/delete-me"
+Issues = "https://github.com/ericthomson13/delete-me/issues"
 
 [build-system]
 requires = ["hatchling"]
