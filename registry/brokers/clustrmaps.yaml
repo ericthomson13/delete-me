@@ -1,0 +1,27 @@
+id: clustrmaps
+name: ClustrMaps
+website: https://clustrmaps.com
+tier: people_search
+opt_out:
+  methods: [web_form]
+  web_form: https://clustrmaps.com/bl/opt-out
+  drop_registered: false
+  instructions_url: https://clustrmaps.com/bl/opt-out
+accepts_authorized_agent: false
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - prior_addresses
+re_aggregation_days: 60
+audit_sources: []
+statutes:
+  - ccpa_1798_105
+  - va_cdpa
+  - co_cpa
+  - ct_ctdpa
+last_verified: 2026-05-19
+maintainer: "@ericthomson13"
+notes: |
+  Property/address visualization on top of public records.
+  Verification source: opt-out page at https://clustrmaps.com/bl/opt-out.

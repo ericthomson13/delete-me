@@ -1,0 +1,30 @@
+id: dun_bradstreet
+name: Dun & Bradstreet, Inc.
+website: https://www.dnb.com
+tier: enterprise_aggregator
+opt_out:
+  methods: [web_form]
+  web_form: https://www.dnb.com/utility-pages/personal-information-request-form.html
+  drop_registered: true
+  instructions_url: https://www.dnb.com/utility-pages/personal-information-request-form.html
+accepts_authorized_agent: true
+agent_form_requirements:
+  - signed_permission
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - prior_addresses
+re_aggregation_days: 60
+audit_sources: []
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+  - va_cdpa
+  - co_cpa
+  - ct_ctdpa
+last_verified: 2026-05-19
+maintainer: "@ericthomson13"
+notes: |
+  B2B firmographic/contact data; CCPA/DSAR portal handles deletion requests.
+  Verification source: opt-out page at https://www.dnb.com/utility-pages/personal-information-request-form.html.

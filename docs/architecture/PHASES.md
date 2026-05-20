@@ -16,19 +16,29 @@ estimates assume a single maintainer working part-time; revise as we learn.
 
 ## Phase 5 status
 
-First tranche of eastern-states / national brokers added (11 new entries:
-lexisnexis_risk, corelogic, epsilon, pipl, truthfinder, instantcheckmate,
-peoplelooker, peekyou, familytreenow, thatsthem, nuwber). Registry total:
-21 brokers / 25 target for top-50 coverage. The four eastern-state statutes
-(NY SHIELD, VA CDPA, CO CPA, CT CTDPA) were already present in
-`legal/statute_citations.yaml`; this phase wired `va_cdpa`/`co_cpa`/`ct_ctdpa`
-into the existing 10 Phase 0 entries so residents of those states get those
-rights cited in their letters. NY SHIELD is a security-safeguards statute
-rather than a deletion right, so it is not referenced from broker entries.
+**Scope target hit: 25 new brokers added (10 → 35 total).** The four
+eastern-state statutes (NY SHIELD, VA CDPA, CO CPA, CT CTDPA) were already
+present in `legal/statute_citations.yaml` from earlier work; Phase 5 wired
+`va_cdpa`/`co_cpa`/`ct_ctdpa` into the existing 10 Phase 0 entries so
+residents of those states get those rights cited in their letters. NY SHIELD
+is a security-safeguards statute rather than a deletion right and is
+intentionally not referenced from broker entries.
 
-Remaining: ~14 more brokers toward the top-50 coverage criterion. The
-project's "5-minute non-coder PR" path applies — `registry-validate.yml`
-gates each new YAML on schema + statute cross-check.
+New brokers, by tranche:
+- **Tranche 1** (commit `4ee949e`): lexisnexis_risk, corelogic, epsilon,
+  pipl, truthfinder, instantcheckmate, peoplelooker, peekyou,
+  familytreenow, thatsthem, nuwber.
+- **Tranche 2**: clustrmaps, smartbackgroundchecks, advancedbackgroundchecks,
+  backgroundalert, checkpeople, publicrecordsnow, publicrecords360,
+  usphonebook, searchpeoplefree, veripages, searchquarry, lookupanyone,
+  zoominfo, dun_bradstreet.
+
+**Toward the "top-50" success criterion** (35 → 50): the remaining ~15
+entries belong on the easy-PR path. `registry-validate.yml` gates each new
+YAML on schema + statute cross-check, and the 5-minute non-coder PR
+contract described in CONTRIBUTING applies. Maintainers should also do a
+verification pass on the tranche-2 entries (current `last_verified=2026-05-19`
+reflects research-time, not browser-time, validation of opt-out URLs).
 
 ## Phase 4 status
 

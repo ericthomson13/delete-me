@@ -1,0 +1,27 @@
+id: smartbackgroundchecks
+name: Smart Background Checks
+website: https://www.smartbackgroundchecks.com
+tier: people_search
+opt_out:
+  methods: [web_form]
+  web_form: https://www.smartbackgroundchecks.com/optout
+  drop_registered: false
+  instructions_url: https://www.smartbackgroundchecks.com/optout
+accepts_authorized_agent: false
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - prior_addresses
+re_aggregation_days: 60
+audit_sources: []
+statutes:
+  - ccpa_1798_105
+  - va_cdpa
+  - co_cpa
+  - ct_ctdpa
+last_verified: 2026-05-19
+maintainer: "@ericthomson13"
+notes: |
+  Web-form-only opt-out; user pastes the profile URL to remove.
+  Verification source: opt-out page at https://www.smartbackgroundchecks.com/optout.
