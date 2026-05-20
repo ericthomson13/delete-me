@@ -42,16 +42,28 @@ reflects research-time, not browser-time, validation of opt-out URLs).
 
 ## Phase 4 status
 
-Vertical slice landed: Tauri v2 + SvelteKit scaffold in `tauri-app/`, FastAPI
-sidecar entry at `service/sidecar_entry.py`, PyInstaller build at
-`scripts/build-sidecar.sh`, and one wired screen (case list). The Rust shell
-spawns the sidecar, reads its advertised loopback port from stdout, and exposes
-it to the UI via the `get_api_base` Tauri command.
+Vertical slice + reliability + release plumbing landed. What's in:
 
-Remaining: rest of the UI (profiles / brokers / audits / evidence), app icons,
-macOS / Windows / Linux code signing, release CI, sidecar healthcheck/restart,
-and the first-run passphrase flow. See `tauri-app/README.md` for the dev loop
-and the full remaining-work checklist.
+- Tauri v2 + SvelteKit scaffold in `tauri-app/`, FastAPI sidecar entry at
+  `service/sidecar_entry.py`, PyInstaller build at `scripts/build-sidecar.sh`,
+  one wired screen (case list).
+- Rust shell spawns the sidecar, reads its advertised loopback port from
+  stdout, exposes it to the UI via the `get_api_base` Tauri command.
+- **Sidecar healthcheck + auto-restart**: a Rust async monitor polls
+  `/health` every 10s; after 3 consecutive failures it respawns the
+  sidecar, re-using the original port (via `DELETE_ME_SIDECAR_PORT`) so the
+  UI's cached api_base stays valid across crashes.
+- **Release CI** (`.github/workflows/release-desktop.yml`): on tag push,
+  builds **unsigned** DMG / MSI / AppImage bundles on macOS / Windows /
+  Linux runners and uploads to a draft GitHub release.
+- **Signing playbook** (`docs/RELEASING.md`): manual Developer ID + notarize
+  for macOS, Authenticode + EV token for Windows, optional GPG for AppImage.
+  Signing stays maintainer-local for now (EV tokens and Apple keys aren't
+  going into GH Actions secrets while pre-1.0).
+
+Remaining: rest of the UI (profiles / brokers / audits / evidence), real
+product icons, and the first-run argon2id passphrase flow. See
+`tauri-app/README.md` for the dev loop.
 
 ## Phase 0 acceptance gate
 

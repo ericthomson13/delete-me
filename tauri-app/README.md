@@ -111,9 +111,7 @@ the Rust test proves the shell parses it correctly. The remaining surface
 
 - [ ] Build out screens for profiles, brokers, audits, evidence (currently only case list)
 - [ ] Replace placeholder icons in `src-tauri/icons/` with real product artwork (`tauri icon` CLI generates from a single source PNG)
-- [ ] macOS code signing + notarization (Apple Developer ID)
-- [ ] Windows code signing (EV cert)
-- [ ] Linux AppImage signing
-- [ ] CI workflow that runs `build-sidecar.sh` per OS and uploads release artifacts
-- [ ] Sidecar healthcheck (currently we only wait for the stdout signal; on crash mid-session we don't recover)
 - [ ] First-run experience: prompt for an argon2id passphrase to derive the SQLite encryption key
+- [x] Sidecar healthcheck + auto-restart (`src-tauri/src/lib.rs` — see `HealthState` and `spawn_health_monitor`)
+- [x] Release CI workflow (`.github/workflows/release-desktop.yml` — unsigned bundles only)
+- [x] Code-signing playbook (`docs/RELEASING.md` — manual maintainer step)
