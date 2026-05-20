@@ -9,10 +9,23 @@ estimates assume a single maintainer working part-time; revise as we learn.
 | **1 — Service + Send** | ✅ **shipped** | FastAPI, SQLModel, Postmark integration (dry-run default), case tracking, docker-compose | `docker compose up` | Dry-run send persists a case with status `sent_dry_run` and an `audit_due_at` 60 days out |
 | **2 — Audit MVP** | ✅ **shipped** | Audit orchestrator + mock + one experimental httpx adapter + audit-due sweeper (CLI + HTTP + docker scheduler container) | `delete-me audit-due` or POST `/audits/sweep` | A noncompliant case transitions to status `noncompliant` with audit evidence on disk |
 | **3 — Evidence Package** | ✅ **shipped** | PackageBuilder produces a directory + zip with letter, agent designation, send receipt, audit evidence, statute citations, pre-filled CA AG complaint draft, and attorney referral pointers | `delete-me evidence --case N` or POST `/cases/:id/evidence` | A user can hand the zip to the CA AG or a plaintiff's attorney |
-| **4 — Tauri Desktop** | pending | Tauri v2 shell, embedded Python sidecar, signed builds | DMG + MSI + AppImage in Releases | Non-tech user installs without terminal |
+| **4 — Tauri Desktop** | 🚧 **in progress** | Tauri v2 shell, embedded Python sidecar, signed builds | DMG + MSI + AppImage in Releases | Non-tech user installs without terminal |
 | **5 — Eastern States** | pending | +25 brokers, NY SHIELD, VA CDPA, CO CPA, CT CTDPA templates | Registry grows | Coverage of top-50 US brokers |
 | **6 — DROP Integration** | pending | CalPrivacy DROP submission path; aligned with 2026-08-01 enforcement | CA users submit via DROP from app | First DROP receipts logged |
 | **7 — GDPR/UK** | pending | Art. 17 erasure templates, EU broker subset | EU launch | First successful Art. 17 erasure confirmed |
+
+## Phase 4 status
+
+Vertical slice landed: Tauri v2 + SvelteKit scaffold in `tauri-app/`, FastAPI
+sidecar entry at `service/sidecar_entry.py`, PyInstaller build at
+`scripts/build-sidecar.sh`, and one wired screen (case list). The Rust shell
+spawns the sidecar, reads its advertised loopback port from stdout, and exposes
+it to the UI via the `get_api_base` Tauri command.
+
+Remaining: rest of the UI (profiles / brokers / audits / evidence), app icons,
+macOS / Windows / Linux code signing, release CI, sidecar healthcheck/restart,
+and the first-run passphrase flow. See `tauri-app/README.md` for the dev loop
+and the full remaining-work checklist.
 
 ## Phase 0 acceptance gate
 

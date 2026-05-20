@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.tauri.app/config/2.0",
+  "productName": "delete-me",
+  "version": "0.0.1",
+  "identifier": "com.delete-me.desktop",
+  "build": {
+    "beforeDevCommand": "pnpm --dir ../ui dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "pnpm --dir ../ui build",
+    "frontendDist": "../ui/build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "delete-me",
+        "width": 1100,
+        "height": 760,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' http://127.0.0.1:* ipc: http://ipc.localhost; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg", "msi", "appimage"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "externalBin": ["binaries/delete-me-sidecar"],
+    "category": "Productivity",
+    "shortDescription": "Open-source CCPA / state-DSAR / GDPR deletion-letter tool",
+    "longDescription": "Generates signed deletion letters for data brokers, tracks delivery, and audits compliance. All PII stays on your machine."
+  },
+  "plugins": {}
+}
