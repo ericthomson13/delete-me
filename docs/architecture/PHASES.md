@@ -11,8 +11,45 @@ estimates assume a single maintainer working part-time; revise as we learn.
 | **3 — Evidence Package** | ✅ **shipped** | PackageBuilder produces a directory + zip with letter, agent designation, send receipt, audit evidence, statute citations, pre-filled CA AG complaint draft, and attorney referral pointers | `delete-me evidence --case N` or POST `/cases/:id/evidence` | A user can hand the zip to the CA AG or a plaintiff's attorney |
 | **4 — Tauri Desktop** | 🚧 **in progress** | Tauri v2 shell, embedded Python sidecar, signed builds | DMG + MSI + AppImage in Releases | Non-tech user installs without terminal |
 | **5 — Eastern States** | 🚧 **in progress** | +25 brokers, NY SHIELD, VA CDPA, CO CPA, CT CTDPA templates | Registry grows | Coverage of top-50 US brokers |
-| **6 — DROP Integration** | pending | CalPrivacy DROP submission path; aligned with 2026-08-01 enforcement | CA users submit via DROP from app | First DROP receipts logged |
+| **6 — DROP Integration** | 🚧 **in progress** | CalPrivacy DROP submission path; aligned with 2026-08-01 enforcement | CA users submit via DROP from app | First DROP receipts logged |
 | **7 — GDPR/UK** | pending | Art. 17 erasure templates, EU broker subset | EU launch | First successful Art. 17 erasure confirmed |
+
+## Phase 6 status
+
+Submission packager, transport adapter, case status, CLI, HTTP route, and
+tests are all in. The DROP submission payload (`DropSubmission` in
+`core-py/delete_me/transport/drop.py`) follows the CalPrivacy rulemaking
+("Required Consumer Information") shape: identity + prior addresses +
+attestation citing Cal. Civ. Code §1798.99.86 + a list of broker
+CalPrivacy IDs.
+
+**Live submit is stubbed pending the production endpoint.** As of writing
+(2026-05-19), the CalPrivacy production submission URL has not published.
+The transport reads `CALPRIVACY_DROP_ENDPOINT` from the environment; until
+that's set, `live=True` raises `TransportError` with a clear message
+pointing at the 2026-08-01 enforcement date. Dry-run is the default and
+fully functional — it writes the submission payload to
+`$DELETE_ME_DROP_OUT/<receipt>.json` for evidence and returns a synthetic
+receipt id.
+
+What needs to happen before declaring Phase 6 shipped:
+
+1. **Populate `opt_out.calprivacy_id`** on the broker entries marked
+   `drop_registered: true`. The CalPrivacy public registry assigns each
+   broker a stable ID; today none of our 35 entries have one set, so
+   `submit_via_drop` raises "no drop_registered brokers have a calprivacy_id
+   set." This is a registry-maintenance task, not code.
+2. **Wire the production URL** into `CALPRIVACY_DROP_ENDPOINT` (or hardcode
+   in `transport/drop.py`) once CalPrivacy publishes it. The live-path code
+   is already written and tested against a `httpx.MockTransport`.
+3. **First real receipt logged** — the success criterion in the table
+   above. Until step 2 is done, dry-run receipts and the on-disk payload
+   are the closest we get.
+
+The on-disk submission payload (dry-run) is itself useful evidence today:
+a CA user can run `delete-me drop-submit --dry-run` and hand the resulting
+JSON to the AG as proof that a delete request *would have been* submitted
+through DROP, in the format CalPrivacy intends.
 
 ## Phase 5 status
 

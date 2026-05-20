@@ -127,3 +127,49 @@ def test_audit_endpoint_marks_noncompliant(client: TestClient, monkeypatch: pyte
     r = client.get(f"/cases/{case['id']}/audits")
     assert r.status_code == 200
     assert len(r.json()) == 1
+
+
+def test_drop_submit_404_on_unknown_profile(client: TestClient):
+    r = client.post("/drop/submit", json={"profile_id": 999, "live": False})
+    assert r.status_code == 404
+
+
+def test_drop_submit_happy_path(
+    client: TestClient,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    # Make the DROP transport write its dry-run payloads into tmp_path so we
+    # don't touch the user's data dir during tests.
+    monkeypatch.setenv("DELETE_ME_DROP_OUT", str(tmp_path / "drop"))
+
+    # Stand up a DROP-eligible broker via monkeypatch — none of the real
+    # registry entries have calprivacy_id populated yet.
+    from delete_me import cases as cases_mod
+
+    from tests.test_drop_transport import fixture_drop_broker  # noqa: E402
+
+    monkeypatch.setattr(
+        cases_mod, "load_brokers", lambda: [fixture_drop_broker("alpha", "DB-A-001")]
+    )
+
+    r = client.post(
+        "/profiles",
+        json={
+            "full_legal_name": "CA Resident",
+            "current_address": "100 Market St, San Francisco CA 94105",
+            "dob_year": 1990,
+            "email": "ca@example.com",
+        },
+    )
+    assert r.status_code == 200, r.text
+    profile_id = r.json()["id"]
+
+    r = client.post("/drop/submit", json={"profile_id": profile_id, "live": False})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["receipt"]["dry_run"] is True
+    assert body["receipt"]["broker_calprivacy_ids"] == ["DB-A-001"]
+    assert len(body["cases"]) == 1
+    assert body["cases"][0]["status"] == "sent_via_drop"
+    assert body["cases"][0]["transport_message_id"] == body["receipt"]["receipt_id"]

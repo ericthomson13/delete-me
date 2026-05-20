@@ -24,7 +24,14 @@ from pydantic import ValidationError
 from delete_me.agent_form import generate_designation
 from delete_me.audit import AuditOrchestrator
 from delete_me.audit.orchestrator import production_registry
-from delete_me.cases import case_as_dict, draft_case, list_cases, send_case, upsert_profile
+from delete_me.cases import (
+    case_as_dict,
+    draft_case,
+    list_cases,
+    send_case,
+    submit_via_drop,
+    upsert_profile,
+)
 from delete_me.db import Case
 from delete_me.db.session import default_db_url, get_session, init_db
 from delete_me.evidence import PackageBuilder
@@ -32,7 +39,8 @@ from delete_me.letters import LetterEngine
 from delete_me.letters.engine import ConsumerProfile
 from delete_me.registry import load_brokers, load_statutes
 from delete_me.registry.loader import cross_check, validate_broker_file
-from delete_me.transport import PostmarkTransport
+from delete_me.transport import DropTransport, PostmarkTransport
+from delete_me.transport.base import TransportError
 
 
 @click.group()
@@ -294,6 +302,52 @@ def send_cmd(case_id: int, live: bool) -> None:
             sys.exit(2)
 
         click.echo(json.dumps({"case": case_as_dict(case), "dry_run": result.dry_run}, indent=2))
+
+
+@main.command("drop-submit")
+@click.option(
+    "--profile",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=Path("./profile.json"),
+    show_default=True,
+    help="Profile JSON written by `delete-me init`.",
+)
+@click.option(
+    "--live/--dry-run",
+    default=False,
+    help=(
+        "Live submit requires CALPRIVACY_DROP_ENDPOINT + CALPRIVACY_DROP_TOKEN. "
+        "Dry-run writes the submission JSON to $DELETE_ME_DROP_OUT and returns a "
+        "synthetic receipt."
+    ),
+)
+def drop_submit_cmd(profile: Path, live: bool) -> None:
+    """Submit a CalPrivacy DROP deletion request covering all drop_registered brokers."""
+    init_db()
+    consumer = _load_profile(profile)
+    transport = DropTransport()
+    with get_session() as session:
+        p = upsert_profile(session, consumer)
+        try:
+            receipt, cases = submit_via_drop(session, p, transport, live=live)
+        except (TransportError, ValueError) as exc:
+            click.echo(f"error: {exc}", err=True)
+            sys.exit(2)
+
+        click.echo(
+            json.dumps(
+                {
+                    "receipt_id": receipt.receipt_id,
+                    "dry_run": receipt.dry_run,
+                    "on_disk_path": str(receipt.on_disk_path)
+                    if receipt.on_disk_path
+                    else None,
+                    "broker_count": len(cases),
+                    "case_ids": [c.id for c in cases],
+                },
+                indent=2,
+            )
+        )
 
 
 @main.command("audit")

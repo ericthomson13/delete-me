@@ -23,7 +23,13 @@ from delete_me.letters import LetterEngine
 from delete_me.letters.engine import ConsumerProfile
 from delete_me.registry import load_brokers, load_statutes
 from delete_me.registry.loader import Broker
-from delete_me.transport import PostmarkTransport, SendResult
+from delete_me.transport import (
+    DropReceipt,
+    DropSubmission,
+    DropTransport,
+    PostmarkTransport,
+    SendResult,
+)
 from delete_me.transport.base import TransportError
 from delete_me.transport.postmark import OutboundLetter
 
@@ -161,6 +167,91 @@ def send_case(
     session.commit()
     session.refresh(case)
     return result
+
+
+def submit_via_drop(
+    session: Session,
+    profile: Profile,
+    transport: DropTransport,
+    live: bool = False,
+) -> tuple[DropReceipt, list[Case]]:
+    """Submit a CalPrivacy DROP request covering every drop_registered broker.
+
+    Creates (or refreshes) a Case per broker with status=SENT_VIA_DROP and a
+    45-day audit window (the cadence the Delete Act mandates). All cases
+    share the same DROP receipt id as transport_message_id so the evidence
+    package can trace them back to a single submission.
+    """
+    drop_brokers = [b for b in load_brokers() if b.opt_out.drop_registered]
+    if not drop_brokers:
+        raise ValueError("no drop_registered brokers in the registry")
+
+    # Only brokers with a known CalPrivacy ID can be in the payload — DROP
+    # routes by that ID, not by broker name. Brokers marked
+    # drop_registered=true but missing calprivacy_id are skipped with a log
+    # warning; they'll need a maintainer follow-up.
+    missing_ids = [b.id for b in drop_brokers if not b.opt_out.calprivacy_id]
+    if missing_ids:
+        import logging
+
+        logging.getLogger(__name__).warning(
+            "drop_registered brokers missing calprivacy_id, skipped: %s",
+            missing_ids,
+        )
+    payload_brokers = [b for b in drop_brokers if b.opt_out.calprivacy_id]
+    if not payload_brokers:
+        raise ValueError(
+            "no drop_registered brokers have a calprivacy_id set — cannot submit"
+        )
+
+    consumer = profile_to_consumer(profile)
+    submission = DropSubmission(
+        full_legal_name=consumer.full_legal_name,
+        current_address=consumer.current_address,
+        prior_addresses=consumer.prior_addresses,
+        dob_year=consumer.dob_year,
+        email=consumer.email,
+        phone=consumer.phone,
+        former_names=consumer.former_names,
+        broker_calprivacy_ids=tuple(b.opt_out.calprivacy_id for b in payload_brokers),
+    )
+
+    try:
+        receipt = transport.submit(submission, live=live)
+    except TransportError:
+        # Don't persist any case state on transport failure — the next
+        # attempt should be idempotent. The error bubbles up to the caller.
+        raise
+
+    cases: list[Case] = []
+    audit_due = receipt.accepted_at + timedelta(days=45)
+    engine = LetterEngine()
+    statutes = load_statutes()
+    for broker in payload_brokers:
+        existing = session.exec(
+            select(Case).where(
+                Case.profile_id == profile.id, Case.broker_id == broker.id
+            )
+        ).first()
+        if existing is None:
+            rendered = engine.render(broker, consumer, statutes)
+            existing = Case(
+                profile_id=profile.id,
+                broker_id=broker.id,
+                letter_markdown=rendered.markdown,
+            )
+        existing.status = CaseStatus.SENT_VIA_DROP
+        existing.sent_at = receipt.accepted_at
+        existing.audit_due_at = audit_due
+        existing.transport_message_id = receipt.receipt_id
+        existing.last_error = None
+        session.add(existing)
+        cases.append(existing)
+
+    session.commit()
+    for c in cases:
+        session.refresh(c)
+    return receipt, cases
 
 
 def broker_for_case(case: Case) -> Broker:

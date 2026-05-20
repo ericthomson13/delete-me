@@ -10,7 +10,7 @@ from delete_me.db.session import init_db
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import audits, brokers, cases, evidence, health, profiles
+from .api import audits, brokers, cases, drop, evidence, health, profiles
 
 
 def create_app() -> FastAPI:
@@ -43,6 +43,7 @@ def create_app() -> FastAPI:
     app.include_router(cases.router)
     app.include_router(audits.router)
     app.include_router(evidence.router)
+    app.include_router(drop.router)
     return app
 
 

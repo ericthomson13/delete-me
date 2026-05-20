@@ -26,6 +26,7 @@ class CaseStatus(enum.StrEnum):
     DRAFT = "draft"
     SENT_DRY_RUN = "sent_dry_run"
     SENT = "sent"
+    SENT_VIA_DROP = "sent_via_drop"
     ACKNOWLEDGED = "acknowledged"
     DELETED_CONFIRMED = "deleted_confirmed"
     AUDIT_INCONCLUSIVE = "audit_inconclusive"
