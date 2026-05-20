@@ -1,0 +1,28 @@
+id: peekyou
+name: PeekYou LLC
+website: https://www.peekyou.com
+tier: people_search
+opt_out:
+  methods: [web_form]
+  web_form: https://www.peekyou.com/about/contact/optout
+  drop_registered: false
+  instructions_url: https://www.peekyou.com/about/contact/optout
+accepts_authorized_agent: true
+agent_form_requirements:
+  - signed_permission
+required_pii:
+  - full_name
+optional_pii:
+  - email
+  - prior_addresses
+re_aggregation_days: 60
+audit_sources:
+  - peekyou_search
+statutes:
+  - ccpa_1798_105
+last_verified: 2026-05-19
+maintainer: "@ericthomson13"
+notes: |
+  Web-form-only opt-out at https://www.peekyou.com/about/contact/optout —
+  the user supplies the PeekYou profile URL(s) to remove. No documented
+  email channel and not on CalPrivacy DROP as of verification date.

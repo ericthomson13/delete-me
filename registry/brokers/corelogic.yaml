@@ -1,0 +1,37 @@
+id: corelogic
+name: CoreLogic, Inc.
+website: https://www.corelogic.com
+tier: enterprise_aggregator
+opt_out:
+  methods: [email, postal]
+  email: privacy@corelogic.com
+  postal: "CoreLogic, Inc., Attn: Privacy Office, 40 Pacifica, Suite 900, Irvine, CA 92618"
+  drop_registered: true
+  instructions_url: https://www.corelogic.com/privacy-policy/
+accepts_authorized_agent: true
+agent_form_requirements:
+  - signed_permission
+  - government_id_redacted
+required_pii:
+  - full_name
+  - current_address
+  - prior_addresses
+optional_pii:
+  - email
+  - phone
+re_aggregation_days: 365
+audit_sources: []
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+  - va_cdpa
+  - co_cpa
+  - ct_ctdpa
+last_verified: 2026-05-19
+maintainer: "@ericthomson13"
+notes: |
+  Property/real-estate data aggregator; widely cited as feeding downstream
+  property and identity products. No consumer-facing search UI, so
+  audit_sources is empty — verify removal via a follow-up data-access
+  request (Phase 6+). Verification source: company's published privacy
+  policy at https://www.corelogic.com/privacy-policy/.

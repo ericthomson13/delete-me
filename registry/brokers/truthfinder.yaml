@@ -1,0 +1,36 @@
+id: truthfinder
+name: TruthFinder
+website: https://www.truthfinder.com
+parent_company: PeopleConnect, Inc.
+tier: people_search
+opt_out:
+  methods: [web_form, email]
+  email: privacy@truthfinder.com
+  web_form: https://www.truthfinder.com/opt-out/
+  drop_registered: true
+  instructions_url: https://www.truthfinder.com/opt-out/
+accepts_authorized_agent: true
+agent_form_requirements:
+  - signed_permission
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - email
+  - prior_addresses
+re_aggregation_days: 45
+audit_sources:
+  - truthfinder_search
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+  - va_cdpa
+  - co_cpa
+  - ct_ctdpa
+last_verified: 2026-05-19
+maintainer: "@ericthomson13"
+notes: |
+  PeopleConnect-family people-search. Removal portal at
+  https://www.truthfinder.com/opt-out/ is the canonical channel; the
+  unified PeopleConnect suppression also covers Intelius and Instant
+  Checkmate when the email matches a single account.

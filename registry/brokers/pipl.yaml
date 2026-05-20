@@ -1,0 +1,34 @@
+id: pipl
+name: Pipl, Inc.
+website: https://pipl.com
+parent_company: Verisk Analytics, Inc.
+tier: enterprise_aggregator
+opt_out:
+  methods: [email]
+  email: support@pipl.com
+  drop_registered: false
+  instructions_url: https://pipl.com/personal-information-removal-request
+accepts_authorized_agent: true
+agent_form_requirements:
+  - signed_permission
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - email
+  - phone
+  - prior_addresses
+re_aggregation_days: 90
+audit_sources: []
+statutes:
+  - ccpa_1798_105
+  - va_cdpa
+  - co_cpa
+  - ct_ctdpa
+last_verified: 2026-05-19
+maintainer: "@ericthomson13"
+notes: |
+  Identity-verification data aggregator; primarily a B2B product, no
+  consumer-facing search front-end. Public removal request page at
+  https://pipl.com/personal-information-removal-request. Not on the
+  CalPrivacy DROP registry as of verification date.

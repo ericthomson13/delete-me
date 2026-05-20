@@ -1,0 +1,38 @@
+id: epsilon
+name: Epsilon Data Management, LLC
+website: https://www.epsilon.com
+parent_company: Publicis Groupe S.A.
+tier: enterprise_aggregator
+opt_out:
+  methods: [email, postal, web_form]
+  email: privacy@epsilon.com
+  postal: "Epsilon, Attn: Privacy, 6021 Connection Drive, Irving, TX 75039"
+  web_form: https://www.epsilon.com/us/privacy-policy
+  drop_registered: true
+  instructions_url: https://www.epsilon.com/us/privacy-policy
+accepts_authorized_agent: true
+agent_form_requirements:
+  - signed_permission
+  - government_id_redacted
+required_pii:
+  - full_name
+  - current_address
+  - prior_addresses
+optional_pii:
+  - email
+  - phone
+re_aggregation_days: 365
+audit_sources: []
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+  - va_cdpa
+  - co_cpa
+  - ct_ctdpa
+last_verified: 2026-05-19
+maintainer: "@ericthomson13"
+notes: |
+  Major marketing-data cooperative (Abacus alliance heritage). No public
+  search front-end — audit_sources empty; verify removal via a follow-up
+  file-disclosure request. Verification source: published privacy policy
+  at https://www.epsilon.com/us/privacy-policy.

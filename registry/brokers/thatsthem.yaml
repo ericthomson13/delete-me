@@ -1,0 +1,27 @@
+id: thatsthem
+name: ThatsThem
+website: https://thatsthem.com
+tier: people_search
+opt_out:
+  methods: [web_form]
+  web_form: https://thatsthem.com/optout
+  drop_registered: false
+  instructions_url: https://thatsthem.com/optout
+accepts_authorized_agent: false
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - email
+  - prior_addresses
+re_aggregation_days: 60
+audit_sources:
+  - thatsthem_search
+statutes:
+  - ccpa_1798_105
+last_verified: 2026-05-19
+maintainer: "@ericthomson13"
+notes: |
+  People-search aggregator. Web-form opt-out at https://thatsthem.com/optout
+  — the user submits each record URL individually. No documented
+  authorized-agent process.

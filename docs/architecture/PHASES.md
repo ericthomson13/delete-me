@@ -10,9 +10,25 @@ estimates assume a single maintainer working part-time; revise as we learn.
 | **2 — Audit MVP** | ✅ **shipped** | Audit orchestrator + mock + one experimental httpx adapter + audit-due sweeper (CLI + HTTP + docker scheduler container) | `delete-me audit-due` or POST `/audits/sweep` | A noncompliant case transitions to status `noncompliant` with audit evidence on disk |
 | **3 — Evidence Package** | ✅ **shipped** | PackageBuilder produces a directory + zip with letter, agent designation, send receipt, audit evidence, statute citations, pre-filled CA AG complaint draft, and attorney referral pointers | `delete-me evidence --case N` or POST `/cases/:id/evidence` | A user can hand the zip to the CA AG or a plaintiff's attorney |
 | **4 — Tauri Desktop** | 🚧 **in progress** | Tauri v2 shell, embedded Python sidecar, signed builds | DMG + MSI + AppImage in Releases | Non-tech user installs without terminal |
-| **5 — Eastern States** | pending | +25 brokers, NY SHIELD, VA CDPA, CO CPA, CT CTDPA templates | Registry grows | Coverage of top-50 US brokers |
+| **5 — Eastern States** | 🚧 **in progress** | +25 brokers, NY SHIELD, VA CDPA, CO CPA, CT CTDPA templates | Registry grows | Coverage of top-50 US brokers |
 | **6 — DROP Integration** | pending | CalPrivacy DROP submission path; aligned with 2026-08-01 enforcement | CA users submit via DROP from app | First DROP receipts logged |
 | **7 — GDPR/UK** | pending | Art. 17 erasure templates, EU broker subset | EU launch | First successful Art. 17 erasure confirmed |
+
+## Phase 5 status
+
+First tranche of eastern-states / national brokers added (11 new entries:
+lexisnexis_risk, corelogic, epsilon, pipl, truthfinder, instantcheckmate,
+peoplelooker, peekyou, familytreenow, thatsthem, nuwber). Registry total:
+21 brokers / 25 target for top-50 coverage. The four eastern-state statutes
+(NY SHIELD, VA CDPA, CO CPA, CT CTDPA) were already present in
+`legal/statute_citations.yaml`; this phase wired `va_cdpa`/`co_cpa`/`ct_ctdpa`
+into the existing 10 Phase 0 entries so residents of those states get those
+rights cited in their letters. NY SHIELD is a security-safeguards statute
+rather than a deletion right, so it is not referenced from broker entries.
+
+Remaining: ~14 more brokers toward the top-50 coverage criterion. The
+project's "5-minute non-coder PR" path applies — `registry-validate.yml`
+gates each new YAML on schema + statute cross-check.
 
 ## Phase 4 status
 

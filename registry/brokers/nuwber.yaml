@@ -1,0 +1,26 @@
+id: nuwber
+name: Nuwber
+website: https://nuwber.com
+tier: people_search
+opt_out:
+  methods: [web_form]
+  web_form: https://nuwber.com/removal/link
+  drop_registered: false
+  instructions_url: https://nuwber.com/removal
+accepts_authorized_agent: false
+required_pii:
+  - full_name
+optional_pii:
+  - email
+  - prior_addresses
+re_aggregation_days: 60
+audit_sources:
+  - nuwber_search
+statutes:
+  - ccpa_1798_105
+last_verified: 2026-05-19
+maintainer: "@ericthomson13"
+notes: |
+  People-search aggregator. Removal flow at https://nuwber.com/removal —
+  user pastes the profile URL and confirms via emailed link. No documented
+  authorized-agent process.

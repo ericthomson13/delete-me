@@ -1,0 +1,26 @@
+id: familytreenow
+name: FamilyTreeNow
+website: https://www.familytreenow.com
+tier: people_search
+opt_out:
+  methods: [web_form]
+  web_form: https://www.familytreenow.com/optout
+  drop_registered: false
+  instructions_url: https://www.familytreenow.com/optout
+accepts_authorized_agent: false
+required_pii:
+  - full_name
+optional_pii:
+  - prior_addresses
+re_aggregation_days: 60
+audit_sources:
+  - familytreenow_search
+statutes:
+  - ccpa_1798_105
+last_verified: 2026-05-19
+maintainer: "@ericthomson13"
+notes: |
+  Genealogy people-search; aggregates public records. Opt-out is a
+  web-form search-and-confirm flow at https://www.familytreenow.com/optout
+  — does not advertise an authorized-agent process, so
+  accepts_authorized_agent is false (the consumer submits directly).
