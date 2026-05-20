@@ -14,7 +14,7 @@ from .api import audits, brokers, cases, evidence, health, profiles
 
 
 def create_app() -> FastAPI:
-    logging.basicConfig(level=os.environ.get("DELETE_ME_LOG_LEVEL", "INFO"))
+    logging.basicConfig(level=os.environ.get("DELETE_ME_LOG_LEVEL", "INFO").upper())
     init_db()
 
     app = FastAPI(

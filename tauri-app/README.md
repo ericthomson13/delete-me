@@ -80,10 +80,37 @@ uvicorn service.app:app --port 8000
 cd tauri-app/ui && VITE_API_BASE=http://127.0.0.1:8000 pnpm dev
 ```
 
+## Automated verification
+
+Two layers cover the desktop app:
+
+**Python integration test** — `service/service_tests/test_sidecar_entry.py`
+spawns `sidecar_entry.py` as a real subprocess (the same way the Rust shell
+does), reads its `LISTENING_ON 127.0.0.1:<port>` line from stdout, hits
+`/health` and `/cases`, and asserts clean SIGTERM shutdown. Runs as part of
+the normal `uv run pytest` suite — so it's already wired into the pre-push
+hook (`scripts/install-hooks.sh`).
+
+```sh
+uv run pytest service/service_tests/test_sidecar_entry.py -v
+```
+
+**Rust unit tests** — `tauri-app/src-tauri/src/lib.rs` has `cargo test`
+cases around `parse_listening_line` covering happy path, trailing newline,
+malformed addresses, and non-handshake noise. Run from `tauri-app/src-tauri/`:
+
+```sh
+cargo test --lib
+```
+
+Between the two: the Python test proves the sidecar honors the contract,
+the Rust test proves the shell parses it correctly. The remaining surface
+(spawning, lifecycle) is straight wiring through `tauri-plugin-shell`.
+
 ## Remaining work for Phase 4
 
 - [ ] Build out screens for profiles, brokers, audits, evidence (currently only case list)
-- [ ] App icons in `src-tauri/icons/` (PNG / ICO / ICNS)
+- [ ] Replace placeholder icons in `src-tauri/icons/` with real product artwork (`tauri icon` CLI generates from a single source PNG)
 - [ ] macOS code signing + notarization (Apple Developer ID)
 - [ ] Windows code signing (EV cert)
 - [ ] Linux AppImage signing

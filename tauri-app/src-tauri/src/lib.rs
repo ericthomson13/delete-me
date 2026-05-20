@@ -3,12 +3,32 @@ use std::time::Duration;
 
 use anyhow::{anyhow, Result};
 use once_cell::sync::OnceCell;
-use tauri::{Manager, RunEvent, State};
+use tauri::{RunEvent, State};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 use tokio::sync::Mutex;
 use tokio::sync::oneshot;
 use tokio::time::timeout;
+
+/// Parses a single stdout line from the Python sidecar. Returns the
+/// `http://host:port` base URL if the line is the readiness signal
+/// (`LISTENING_ON 127.0.0.1:54321`), otherwise `None`.
+///
+/// Kept pure (and free of tauri/tokio deps) so it's unit-testable.
+fn parse_listening_line(line: &str) -> Option<String> {
+    let trimmed = line.trim();
+    let addr = trimmed.strip_prefix("LISTENING_ON ")?.trim();
+    if addr.is_empty() {
+        return None;
+    }
+    // Reject anything that doesn't look like host:port — we don't want to
+    // build a malformed URL and chase a connect error later.
+    let (_, port) = addr.rsplit_once(':')?;
+    if port.is_empty() || !port.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    Some(format!("http://{addr}"))
+}
 
 // Holds the live sidecar handle so we can kill it on app exit.
 struct SidecarState {
@@ -50,8 +70,7 @@ async fn spawn_sidecar(app: &tauri::AppHandle, state: Arc<SidecarState>) -> Resu
                 CommandEvent::Stdout(line) => {
                     let line = String::from_utf8_lossy(&line).to_string();
                     log::info!("sidecar stdout: {line}");
-                    if let Some(addr) = line.trim().strip_prefix("LISTENING_ON ") {
-                        let base = format!("http://{}", addr);
+                    if let Some(base) = parse_listening_line(&line) {
                         let _ = state_for_reader.api_base.set(base.clone());
                         if let Some(tx) = tx_slot.take() {
                             let _ = tx.send(base);
@@ -115,4 +134,43 @@ pub fn run() {
                 });
             }
         });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_listening_line;
+
+    #[test]
+    fn parses_loopback_port() {
+        assert_eq!(
+            parse_listening_line("LISTENING_ON 127.0.0.1:54321"),
+            Some("http://127.0.0.1:54321".into())
+        );
+    }
+
+    #[test]
+    fn tolerates_trailing_newline() {
+        assert_eq!(
+            parse_listening_line("LISTENING_ON 127.0.0.1:8080\n"),
+            Some("http://127.0.0.1:8080".into())
+        );
+    }
+
+    #[test]
+    fn rejects_non_handshake_lines() {
+        assert_eq!(parse_listening_line("INFO: uvicorn running"), None);
+        assert_eq!(parse_listening_line(""), None);
+        assert_eq!(parse_listening_line("LISTENING_ON"), None);
+        assert_eq!(parse_listening_line("LISTENING_ON "), None);
+    }
+
+    #[test]
+    fn rejects_malformed_address() {
+        // No port at all.
+        assert_eq!(parse_listening_line("LISTENING_ON 127.0.0.1"), None);
+        // Non-numeric port.
+        assert_eq!(parse_listening_line("LISTENING_ON 127.0.0.1:abc"), None);
+        // Empty port.
+        assert_eq!(parse_listening_line("LISTENING_ON 127.0.0.1:"), None);
+    }
 }
