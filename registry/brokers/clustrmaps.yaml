@@ -20,8 +20,8 @@ statutes:
   - va_cdpa
   - co_cpa
   - ct_ctdpa
-last_verified: 2026-05-19
+last_verified: 2026-05-20
 maintainer: "@ericthomson13"
 notes: |
   Property/address visualization on top of public records.
-  Verification source: opt-out page at https://clustrmaps.com/bl/opt-out.
+  Browser-verified 2026-05-20: removal page exists; gated by Cloudflare/reCAPTCHA, requires human submission.

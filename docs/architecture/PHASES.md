@@ -73,12 +73,18 @@ New brokers, by tranche:
   usphonebook, searchpeoplefree, veripages, searchquarry, lookupanyone,
   zoominfo, dun_bradstreet.
 
-**Toward the "top-50" success criterion** (35 → 50): the remaining ~15
+**Tranche-2 browser-verification pass** (2026-05-20): all 14 entries
+were walked through in a real browser. 12 confirmed (most gated by
+Cloudflare/reCAPTCHA or, in ZoomInfo's case, a press-and-hold challenge —
+all require human submission, which is fine for a locally-running desktop
+app). 2 dropped from the registry: `backgroundalert` (DNS-dead) and
+`lookupanyone` (TCP-unreachable from multiple networks). Net broker
+count is therefore 33, not 35.
+
+**Toward the "top-50" success criterion** (33 → 50): the remaining ~17
 entries belong on the easy-PR path. `registry-validate.yml` gates each new
 YAML on schema + statute cross-check, and the 5-minute non-coder PR
-contract described in CONTRIBUTING applies. Maintainers should also do a
-verification pass on the tranche-2 entries (current `last_verified=2026-05-19`
-reflects research-time, not browser-time, validation of opt-out URLs).
+contract described in CONTRIBUTING applies.
 
 ## Phase 4 status
 

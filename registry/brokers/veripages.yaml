@@ -20,8 +20,8 @@ statutes:
   - va_cdpa
   - co_cpa
   - ct_ctdpa
-last_verified: 2026-05-19
+last_verified: 2026-05-20
 maintainer: "@ericthomson13"
 notes: |
   Web-form-only data-removal flow.
-  Verification source: opt-out page at https://veripages.com/data/data-removal.
+  Browser-verified 2026-05-20: page loads in a real browser. Automated HTTP probes get a 404 (likely IP-based bot detection serving a fake 404), so do not rely on the URL responding 200 in CI healthchecks.

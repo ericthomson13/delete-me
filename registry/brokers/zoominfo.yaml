@@ -23,8 +23,8 @@ statutes:
   - va_cdpa
   - co_cpa
   - ct_ctdpa
-last_verified: 2026-05-19
+last_verified: 2026-05-20
 maintainer: "@ericthomson13"
 notes: |
   B2B contact-data aggregator; CCPA privacy center handles deletion requests. Agent process documented.
-  Verification source: opt-out page at https://www.zoominfo.com/about-zoominfo/privacy-center.
+  Browser-verified 2026-05-20: privacy center exists; gated by a press-and-hold bot challenge (not reCAPTCHA), requires human submission.

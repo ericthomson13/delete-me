@@ -20,8 +20,8 @@ statutes:
   - va_cdpa
   - co_cpa
   - ct_ctdpa
-last_verified: 2026-05-19
+last_verified: 2026-05-20
 maintainer: "@ericthomson13"
 notes: |
   Web-form-only opt-out.
-  Verification source: opt-out page at https://www.searchpeoplefree.com/opt-out.
+  Browser-verified 2026-05-20: opt-out page exists; gated by Cloudflare captcha, requires human submission.
