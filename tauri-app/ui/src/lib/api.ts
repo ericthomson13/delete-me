@@ -41,3 +41,23 @@ export async function listCases(): Promise<CaseRow[]> {
   if (!res.ok) throw new Error(`GET /cases failed: ${res.status}`);
   return (await res.json()) as CaseRow[];
 }
+
+export type BrokerTier = 'enterprise_aggregator' | 'people_search' | 'long_tail';
+export type OptOutMethod = 'email' | 'web_form' | 'postal' | 'drop' | 'phone';
+
+export interface BrokerRow {
+  id: string;
+  name: string;
+  tier: BrokerTier | null;
+  accepts_authorized_agent: boolean;
+  user_submit_only: boolean;
+  methods: OptOutMethod[];
+  drop_registered: boolean | null;
+}
+
+export async function listBrokers(): Promise<BrokerRow[]> {
+  const base = await apiBase();
+  const res = await fetch(`${base}/brokers`);
+  if (!res.ok) throw new Error(`GET /brokers failed: ${res.status}`);
+  return (await res.json()) as BrokerRow[];
+}

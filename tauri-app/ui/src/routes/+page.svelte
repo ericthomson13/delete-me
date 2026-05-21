@@ -19,8 +19,8 @@
 
 <main>
   <header>
-    <h1>delete-me</h1>
-    <p class="sub">Open cases</p>
+    <h1>Cases</h1>
+    <p class="sub">Open cases.</p>
   </header>
 
   {#if loading}
@@ -28,7 +28,7 @@
   {:else if error}
     <p class="error">{error}</p>
   {:else if cases.length === 0}
-    <p>No cases yet. Draft one with <code>delete-me draft</code>.</p>
+    <p class="empty">No cases yet. Draft one with <code>delete-me draft</code>.</p>
   {:else}
     <table>
       <thead>
@@ -44,7 +44,7 @@
         {#each cases as c (c.id)}
           <tr>
             <td>{c.id}</td>
-            <td>{c.broker_id}</td>
+            <td><code>{c.broker_id}</code></td>
             <td>{c.status}</td>
             <td>{c.sent_at ?? '—'}</td>
             <td>{c.audit_due_at ?? '—'}</td>
@@ -61,18 +61,32 @@
     max-width: 960px;
     margin: 0 auto;
     padding: 2rem;
-    color: #1f2328;
+    color: var(--fg);
   }
   header { margin-bottom: 1.5rem; }
-  h1 { margin: 0; font-size: 1.5rem; }
-  .sub { color: #656d76; margin: 0.25rem 0 0; }
+  h1 { margin: 0; font-size: 1.5rem; letter-spacing: -0.01em; }
+  .sub { color: var(--fg-muted); margin: 0.25rem 0 0; font-size: 0.92rem; }
+  .empty { color: var(--fg-muted); }
   table { width: 100%; border-collapse: collapse; }
   th, td {
     text-align: left;
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid #d0d7de;
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid var(--border);
   }
-  th { font-weight: 600; background: #f6f8fa; }
-  .error { color: #cf222e; }
-  code { background: #f6f8fa; padding: 0.1rem 0.3rem; border-radius: 3px; }
+  th {
+    font-weight: 600;
+    background: var(--bg-elevated);
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  td code {
+    background: var(--bg-elevated);
+    padding: 0.1rem 0.3rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+  }
+  .error { color: var(--error); }
+  code { background: var(--bg-elevated); padding: 0.1rem 0.3rem; border-radius: var(--radius-sm); }
 </style>

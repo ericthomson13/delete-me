@@ -297,4 +297,5 @@ def brokers_summary() -> Iterable[dict]:
             "accepts_authorized_agent": b.accepts_authorized_agent,
             "user_submit_only": b.user_submit_only,
             "methods": list(b.opt_out.methods),
+            "drop_registered": b.opt_out.drop_registered,
         }

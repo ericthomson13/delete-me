@@ -1,0 +1,71 @@
+/* Theme tokens. Light + dark via prefers-color-scheme. */
+
+:root {
+  /* Surfaces */
+  --bg: #ffffff;
+  --bg-elevated: #f6f8fa;
+  --bg-hover: #eef1f4;
+
+  /* Text */
+  --fg: #1f2328;
+  --fg-muted: #656d76;
+  --fg-subtle: #8c959f;
+
+  /* Lines */
+  --border: #d0d7de;
+  --border-strong: #afb8c1;
+
+  /* Brand accent — used sparingly: brand mark, active nav, focus rings */
+  --accent: #7c3aed;
+  --accent-soft: rgba(124, 58, 237, 0.12);
+  --accent-strong: #6d28d9;
+
+  /* States */
+  --error: #cf222e;
+  --success: #1a7f37;
+
+  /* Pills (method tags) */
+  --pill-bg: #eef4ff;
+  --pill-fg: #0550ae;
+
+  /* Radii / shadows */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-pill: 999px;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --bg-elevated: #161b22;
+    --bg-hover: #1c2128;
+
+    --fg: #e6edf3;
+    --fg-muted: #8b949e;
+    --fg-subtle: #6e7681;
+
+    --border: #30363d;
+    --border-strong: #484f58;
+
+    --accent: #a78bfa;
+    --accent-soft: rgba(167, 139, 250, 0.18);
+    --accent-strong: #c4b5fd;
+
+    --error: #ff7b72;
+    --success: #56d364;
+
+    --pill-bg: #1c2333;
+    --pill-fg: #a5d6ff;
+
+    color-scheme: dark;
+  }
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  margin: 0;
+  padding: 0;
+}
