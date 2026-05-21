@@ -3,6 +3,9 @@
 Extracted from `PLAN.md`. Each phase is independently shippable. Effort
 estimates assume a single maintainer working part-time; revise as we learn.
 
+> Open follow-ups are tracked in [`../ROADMAP.md`](../ROADMAP.md) with one
+> GitHub issue per deliverable.
+
 | Phase | Status | Scope | Ships | Success criteria |
 |---|---|---|---|---|
 | **0 — Foundation** | ✅ **shipped** | Registry schema, 10 western-state brokers, letter engine, agent form, CLI only | `uv run delete-me` | Non-CA user produces 10 signed letters in <10 min |
