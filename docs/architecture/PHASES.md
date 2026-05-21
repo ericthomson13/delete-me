@@ -13,7 +13,7 @@ estimates assume a single maintainer working part-time; revise as we learn.
 | **2 — Audit MVP** | ✅ **shipped** | Audit orchestrator + mock + one experimental httpx adapter + audit-due sweeper (CLI + HTTP + docker scheduler container) | `delete-me audit-due` or POST `/audits/sweep` | A noncompliant case transitions to status `noncompliant` with audit evidence on disk |
 | **3 — Evidence Package** | ✅ **shipped** | PackageBuilder produces a directory + zip with letter, agent designation, send receipt, audit evidence, statute citations, pre-filled CA AG complaint draft, and attorney referral pointers | `delete-me evidence --case N` or POST `/cases/:id/evidence` | A user can hand the zip to the CA AG or a plaintiff's attorney |
 | **4 — Tauri Desktop** | 🚧 **in progress** | Tauri v2 shell, embedded Python sidecar, signed builds | DMG + MSI + AppImage in Releases | Non-tech user installs without terminal |
-| **5 — Eastern States** | 🚧 **in progress** | +25 brokers, NY SHIELD, VA CDPA, CO CPA, CT CTDPA templates | Registry grows | Coverage of top-50 US brokers |
+| **5 — Eastern States** | ✅ **shipped** | +25 brokers, NY SHIELD, VA CDPA, CO CPA, CT CTDPA templates | Registry grows | Coverage of top-50 US brokers |
 | **6 — DROP Integration** | 🚧 **in progress** | CalPrivacy DROP submission path; aligned with 2026-08-01 enforcement | CA users submit via DROP from app | First DROP receipts logged |
 | **7 — GDPR/UK** | pending | Art. 17 erasure templates, EU broker subset | EU launch | First successful Art. 17 erasure confirmed |
 
@@ -38,10 +38,15 @@ receipt id.
 What needs to happen before declaring Phase 6 shipped:
 
 1. **Populate `opt_out.calprivacy_id`** on the broker entries marked
-   `drop_registered: true`. The CalPrivacy public registry assigns each
-   broker a stable ID; today none of our 35 entries have one set, so
-   `submit_via_drop` raises "no drop_registered brokers have a calprivacy_id
-   set." This is a registry-maintenance task, not code.
+   `drop_registered: true`. **Blocked on upstream as of 2026-05-20**: the
+   CPPA public registry (4 CSV downloads at
+   `https://cppa.ca.gov/data_broker_registry/`) keys every broker by
+   *legal name* — there is no DB-xxxx (or any other) per-broker ID column,
+   and the consumer-facing DROP docs describe a single broadcast request
+   rather than a per-broker selector. Best guess: the production DROP API
+   spec (publishing alongside the 2026-08-01 enforcement date) will
+   define what identifier to send; until then this field has no canonical
+   value to populate. Tracked in #6.
 2. **Wire the production URL** into `CALPRIVACY_DROP_ENDPOINT` (or hardcode
    in `transport/drop.py`) once CalPrivacy publishes it. The live-path code
    is already written and tested against a `httpx.MockTransport`.
@@ -81,10 +86,34 @@ app). 2 dropped from the registry: `backgroundalert` (DNS-dead) and
 `lookupanyone` (TCP-unreachable from multiple networks). Net broker
 count is therefore 33, not 35.
 
-**Toward the "top-50" success criterion** (33 → 50): the remaining ~17
-entries belong on the easy-PR path. `registry-validate.yml` gates each new
-YAML on schema + statute cross-check, and the 5-minute non-coder PR
-contract described in CONTRIBUTING applies.
+**Top-50 success criterion hit 2026-05-20: 33 → 50 brokers.** Tranche 3
+added 17 new entries pulled from CPPA's `complete-reg-data-brokers.csv`
+and `registry2025.csv`, all browser-verified the same day:
+
+- **Enterprise aggregators (9)**: liveramp, oracle_data_cloud, data_axle,
+  rocketreach, apollo_io, seamless_ai, lusha, peopledatalabs, outlogic.
+- **People search (5)**: spydialer, searchbug, peoplesearcher,
+  uspeoplesearch, calltruth's slot replaced *(see below)*.
+- **Long-tail / reputation (3)**: privaterecords, infomatics, weinform,
+  checksecrets.
+
+Deliberate omissions: the three Big-3 credit bureaus (Experian, Equifax,
+TransUnion) and Equifax Workforce Solutions were considered and **deferred
+to a follow-up**, because they're FCRA-regulated and need new schema
+fields (`regulated_by`, `removal_scope`, `disclaimers`) to be presented
+honestly in the desktop UI — sending a generic "we deleted you" message
+for a credit bureau would misrepresent what CCPA actually does (FCRA
+exempts the credit-report data itself). The four long-tail/mugshot
+entries carry a `disclaimer_pending` marker in their `notes:` block for
+the same follow-up.
+
+Mid-pass replacements: `openpeoplesearch` was added but immediately
+dropped (site discontinued per browser check); `calltruth` was added,
+discovered DNS-dead during pre-screen (same shape as backgroundalert
+from tranche 2), and replaced with `uspeoplesearch` from the 2025 CSV.
+
+Forward-looking automation work (Playwright-based tiered submission) is
+tracked in #8.
 
 ## Phase 4 status
 

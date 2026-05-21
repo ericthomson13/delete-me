@@ -1,0 +1,33 @@
+id: weinform
+name: We Inform LLC
+website: https://www.weinform.org
+tier: long_tail
+opt_out:
+  methods: [web_form, email]
+  web_form: https://www.weinform.org/privacy
+  email: support@weinform.org
+  drop_registered: true
+  instructions_url: https://www.weinform.org/privacy
+accepts_authorized_agent: false
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - prior_addresses
+re_aggregation_days: 60
+audit_sources: []
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+  - va_cdpa
+  - co_cpa
+  - ct_ctdpa
+last_verified: 2026-05-20
+maintainer: "@ericthomson13"
+notes: |
+  Mugshot / court-records aggregator. Also operates truthrecord.org
+  under the same LLC. Opt-out via /privacy page. disclaimer_pending:
+  mugshot-class sites have a known perverse-incentive pattern — add
+  warning copy when the schema supports it. Sourced from CPPA
+  complete-reg-data-brokers.csv (2026-05-20); URL browser-verified
+  2026-05-20.

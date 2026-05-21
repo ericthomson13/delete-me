@@ -1,0 +1,36 @@
+id: seamless_ai
+name: Seamless Contacts, Inc. (d/b/a Seamless.AI)
+website: https://www.seamless.ai
+tier: enterprise_aggregator
+opt_out:
+  methods: [web_form, email]
+  web_form: https://login.seamless.ai/personalDataRequest
+  email: privacy@seamlessleads.com
+  drop_registered: true
+  instructions_url: https://www.seamless.ai/privacy
+accepts_authorized_agent: true
+agent_form_requirements:
+  - signed_permission
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - email
+  - phone
+re_aggregation_days: 180
+audit_sources: []
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+  - va_cdpa
+  - co_cpa
+  - ct_ctdpa
+last_verified: 2026-05-20
+maintainer: "@ericthomson13"
+notes: |
+  B2B contact-data platform. Match key is work email. The opt-out form
+  is hosted on the login subdomain; account creation is not required to
+  submit. Sourced from CPPA complete-reg-data-brokers.csv (2026-05-20);
+  URL browser-verified 2026-05-20 (works in browser; login subdomain
+  returns 403 to automated probes — likely Cloudflare protecting the
+  login path).

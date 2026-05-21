@@ -1,0 +1,33 @@
+id: uspeoplesearch
+name: USPEOPLESEARCH.COM, LLC
+website: https://www.uspeoplesearch.com
+tier: people_search
+opt_out:
+  methods: [web_form, email]
+  web_form: https://www.uspeoplesearch.com/opt-out
+  email: operations@uspeoplesearch.com
+  drop_registered: true
+  instructions_url: https://www.uspeoplesearch.com/opt-out
+accepts_authorized_agent: false
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - phone
+  - prior_addresses
+re_aggregation_days: 60
+audit_sources: []
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+  - va_cdpa
+  - co_cpa
+  - ct_ctdpa
+last_verified: 2026-05-20
+maintainer: "@ericthomson13"
+notes: |
+  People-search site. Replacement for the dead calltruth.com slot
+  (calltruth domain has no A record despite active registration).
+  Sourced from CPPA registry2025.csv (2026-05-20); URL browser-verified
+  2026-05-20 at /opt-out (CPPA registration cites /purge-my-data/ which
+  is 404 — opt-out has moved to /opt-out).

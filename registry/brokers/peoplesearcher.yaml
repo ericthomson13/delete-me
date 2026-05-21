@@ -1,0 +1,31 @@
+id: peoplesearcher
+name: The People Searchers LLC
+website: https://www.peoplesearcher.com
+tier: people_search
+opt_out:
+  methods: [web_form, email]
+  web_form: https://www.peoplesearcher.com/optOut/name/landing
+  email: support@peoplesearcher.com
+  drop_registered: true
+  instructions_url: https://www.peoplesearcher.com/optOut/name/landing
+accepts_authorized_agent: false
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - prior_addresses
+re_aggregation_days: 60
+audit_sources: []
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+  - va_cdpa
+  - co_cpa
+  - ct_ctdpa
+last_verified: 2026-05-20
+maintainer: "@ericthomson13"
+notes: |
+  People-search site. Web-form opt-out flow at /optOut/name/landing
+  (same URL template as several other small operators — possibly
+  shared backend). Sourced from CPPA complete-reg-data-brokers.csv
+  (2026-05-20); URL browser-verified 2026-05-20.

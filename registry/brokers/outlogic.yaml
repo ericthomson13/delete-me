@@ -1,0 +1,35 @@
+id: outlogic
+name: Outlogic, LLC
+website: https://outlogic.io
+tier: enterprise_aggregator
+opt_out:
+  methods: [web_form, email]
+  web_form: https://outlogic.io/opt-out-form/
+  email: privacy@outlogic.io
+  drop_registered: true
+  instructions_url: https://outlogic.io/privacy-policy/
+accepts_authorized_agent: true
+agent_form_requirements:
+  - signed_permission
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - email
+  - phone
+re_aggregation_days: 365
+audit_sources: []
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+  - va_cdpa
+  - co_cpa
+  - ct_ctdpa
+last_verified: 2026-05-20
+maintainer: "@ericthomson13"
+notes: |
+  Location-data broker, formerly X-Mode Social. Operating under an FTC
+  consent order (2024) restricting sale of sensitive location data; that
+  order does not displace state DSAR rights, and deletion requests
+  remain in scope. Sourced from CPPA complete-reg-data-brokers.csv
+  (2026-05-20); URL browser-verified 2026-05-20.

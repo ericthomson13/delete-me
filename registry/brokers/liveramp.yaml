@@ -1,0 +1,42 @@
+id: liveramp
+name: LiveRamp, Inc.
+website: https://liveramp.com
+tier: enterprise_aggregator
+opt_out:
+  methods: [web_form, email]
+  web_form: https://liveramp.com/opt_out/
+  email: consumercare@liveramp.com
+  drop_registered: true
+  instructions_url: https://liveramp.com/opt_out/
+accepts_authorized_agent: true
+agent_form_requirements:
+  - signed_permission
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - email
+  - phone
+  - prior_addresses
+re_aggregation_days: 365
+audit_sources: []
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+  - va_cdpa
+  - co_cpa
+  - ct_ctdpa
+last_verified: 2026-05-20
+maintainer: "@ericthomson13"
+notes: |
+  Identity-graph aggregator (formerly Acxiom LiveRamp). Matches consumers
+  by hashed email/phone, so providing those in the agent letter improves
+  match rate. CPPA-registered, fans into many downstream adtech buyers.
+  Sourced from CPPA complete-reg-data-brokers.csv (2026-05-20); CPPA's
+  listed subdomain (my-privacy-choices.liveramp.com) is DNS-dead — use
+  the canonical /opt_out/ page on the apex domain instead, which routes
+  to region-specific "Your Privacy Choices" portals. Browser-verified
+  2026-05-20: page reachable but lands on a portal/login surface rather
+  than a direct form — confirm the regional submission flow works for
+  the consumer's jurisdiction before relying on this for unattended
+  sends.

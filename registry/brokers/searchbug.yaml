@@ -1,0 +1,31 @@
+id: searchbug
+name: Searchbug
+website: https://www.searchbug.com
+tier: people_search
+opt_out:
+  methods: [web_form, email]
+  web_form: https://www.searchbug.com/ccpa.aspx
+  email: support@searchbug.com
+  drop_registered: true
+  instructions_url: https://www.searchbug.com/ccpa.aspx
+accepts_authorized_agent: false
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - phone
+  - prior_addresses
+re_aggregation_days: 60
+audit_sources: []
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+  - va_cdpa
+  - co_cpa
+  - ct_ctdpa
+last_verified: 2026-05-20
+maintainer: "@ericthomson13"
+notes: |
+  Public-records / people-search site. CCPA opt-out flow at /ccpa.aspx.
+  Sourced from CPPA complete-reg-data-brokers.csv (2026-05-20); URL
+  browser-verified 2026-05-20.

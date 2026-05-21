@@ -1,0 +1,34 @@
+id: spydialer
+name: Spy Dialer, Inc. (d/b/a SpyDialer.com)
+website: https://www.spydialer.com
+tier: people_search
+opt_out:
+  methods: [web_form, email]
+  web_form: https://www.spydialer.com/
+  email: info@spydialer.com
+  drop_registered: true
+  instructions_url: https://www.spydialer.com/
+accepts_authorized_agent: false
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - phone
+  - prior_addresses
+re_aggregation_days: 60
+audit_sources: []
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+  - va_cdpa
+  - co_cpa
+  - ct_ctdpa
+last_verified: 2026-05-20
+maintainer: "@ericthomson13"
+notes: |
+  Free reverse-phone-lookup site. Per CPPA registration, opt-out is via
+  a "Do Not Sell My Info" / "Remove My Info" link in the site footer
+  (no direct deep-link). web_form URL points at homepage; the actual
+  removal path resolves via footer navigation. Sourced from CPPA
+  complete-reg-data-brokers.csv (2026-05-20); URL browser-verified
+  2026-05-20.

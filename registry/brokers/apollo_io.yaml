@@ -1,0 +1,34 @@
+id: apollo_io
+name: ZenLeads Inc. (d/b/a Apollo.io)
+website: https://www.apollo.io
+tier: enterprise_aggregator
+opt_out:
+  methods: [web_form, email]
+  web_form: https://www.apollo.io/company/privacy-center
+  email: privacy@apollo.io
+  drop_registered: true
+  instructions_url: https://www.apollo.io/privacy-policy
+accepts_authorized_agent: true
+agent_form_requirements:
+  - signed_permission
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - email
+  - phone
+re_aggregation_days: 180
+audit_sources: []
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+  - va_cdpa
+  - co_cpa
+  - ct_ctdpa
+last_verified: 2026-05-20
+maintainer: "@ericthomson13"
+notes: |
+  B2B sales-intelligence platform. Match key is work email. Privacy center
+  documents the request workflow. Sourced from CPPA
+  complete-reg-data-brokers.csv (2026-05-20); URL browser-verified
+  2026-05-20.

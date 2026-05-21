@@ -1,0 +1,40 @@
+id: oracle_data_cloud
+name: Oracle America, Inc. (Oracle Data Cloud)
+website: https://www.oracle.com
+parent_company: Oracle Corporation
+tier: enterprise_aggregator
+opt_out:
+  methods: [web_form, email]
+  web_form: https://datacloudoptout.oracle.com/
+  email: privacy_ww@oracle.com
+  drop_registered: true
+  instructions_url: https://www.oracle.com/legal/privacy/marketing-cloud-data-cloud-privacy-policy.html
+accepts_authorized_agent: true
+agent_form_requirements:
+  - signed_permission
+required_pii:
+  - full_name
+  - current_address
+optional_pii:
+  - email
+  - phone
+  - prior_addresses
+re_aggregation_days: 365
+audit_sources: []
+statutes:
+  - ccpa_1798_105
+  - ca_delete_act
+  - va_cdpa
+  - co_cpa
+  - ct_ctdpa
+last_verified: 2026-05-20
+maintainer: "@ericthomson13"
+notes: |
+  Oracle Data Cloud (formerly Datalogix + BlueKai). Oracle announced a
+  wind-down of the Data Cloud audience-marketplace business in 2024 but
+  remains CPPA-registered; the opt-out portal still operates and the
+  consumer-facing Oracle privacy team handles deletion requests.
+  Sourced from CPPA complete-reg-data-brokers.csv (2026-05-20);
+  browser-verified 2026-05-20: portal reachable but submission flow
+  is not obviously a direct form — confirm before relying on this for
+  unattended sends, or fall back to the email contact.
