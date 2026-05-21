@@ -5,7 +5,7 @@ from delete_me.db import Profile
 from delete_me.letters.engine import ConsumerProfile
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from ._deps import get_session
 
@@ -45,6 +45,11 @@ def _to_out(p: Profile) -> ProfileOut:
         prior_addresses=list(c.prior_addresses),
         former_names=list(c.former_names),
     )
+
+
+@router.get("", response_model=list[ProfileOut])
+def list_profiles(session: Session = Depends(get_session)) -> list[ProfileOut]:
+    return [_to_out(p) for p in session.exec(select(Profile).order_by(Profile.id)).all()]
 
 
 @router.post("", response_model=ProfileOut)

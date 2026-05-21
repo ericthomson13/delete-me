@@ -61,3 +61,45 @@ export async function listBrokers(): Promise<BrokerRow[]> {
   if (!res.ok) throw new Error(`GET /brokers failed: ${res.status}`);
   return (await res.json()) as BrokerRow[];
 }
+
+export interface ProfileRow {
+  id: number;
+  full_legal_name: string;
+  current_address: string;
+  email: string | null;
+  phone: string | null;
+  dob_year: number | null;
+  prior_addresses: string[];
+  former_names: string[];
+}
+
+export interface ProfileInput {
+  full_legal_name: string;
+  current_address: string;
+  email?: string | null;
+  phone?: string | null;
+  dob_year?: number | null;
+  prior_addresses?: string[];
+  former_names?: string[];
+}
+
+export async function listProfiles(): Promise<ProfileRow[]> {
+  const base = await apiBase();
+  const res = await fetch(`${base}/profiles`);
+  if (!res.ok) throw new Error(`GET /profiles failed: ${res.status}`);
+  return (await res.json()) as ProfileRow[];
+}
+
+export async function saveProfile(input: ProfileInput): Promise<ProfileRow> {
+  const base = await apiBase();
+  const res = await fetch(`${base}/profiles`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`POST /profiles failed: ${res.status} — ${text}`);
+  }
+  return (await res.json()) as ProfileRow;
+}
