@@ -56,6 +56,17 @@ class OptOut(BaseModel):
     instructions_url: HttpUrl | None = None
 
 
+AutomationTier = Literal["auto", "semi", "manual"]
+
+
+class Automation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    tier: AutomationTier
+    script: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_]*\.py$")
+    last_automation_pass: date | None = None
+
+
 class Broker(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -77,6 +88,7 @@ class Broker(BaseModel):
     last_verified: date
     maintainer: str = Field(pattern=r"^@[A-Za-z0-9-]+$")
     notes: str | None = None
+    automation: Automation | None = None
 
 
 class Statute(BaseModel):

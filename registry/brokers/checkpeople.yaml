@@ -25,3 +25,6 @@ maintainer: "@ericthomson13"
 notes: |
   Web-form-only opt-out at /opt-out.
   Browser-verified 2026-05-20: opt-out page works, no captcha or bot interstitial.
+automation:
+  tier: auto
+  script: checkpeople.py

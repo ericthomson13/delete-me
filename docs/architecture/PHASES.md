@@ -16,6 +16,7 @@ estimates assume a single maintainer working part-time; revise as we learn.
 | **5 — Eastern States** | ✅ **shipped** | +25 brokers, NY SHIELD, VA CDPA, CO CPA, CT CTDPA templates | Registry grows | Coverage of top-50 US brokers |
 | **6 — DROP Integration** | 🚧 **in progress** | CalPrivacy DROP submission path; aligned with 2026-08-01 enforcement | CA users submit via DROP from app | First DROP receipts logged |
 | **7 — GDPR/UK** | pending | Art. 17 erasure templates, EU broker subset | EU launch | First successful Art. 17 erasure confirmed |
+| **8 — Submission Automation** | 🚧 **in progress** | Tiered Playwright submission framework (auto/semi/manual), per-broker scripts, weekly CI health-check | `delete-me automation-run --broker X` | First broker auto-submitted with screenshot evidence |
 
 ## Phase 6 status
 
@@ -139,6 +140,59 @@ Vertical slice + reliability + release plumbing landed. What's in:
 Remaining: rest of the UI (profiles / brokers / audits / evidence), real
 product icons, and the first-run argon2id passphrase flow. See
 `tauri-app/README.md` for the dev loop.
+
+## Phase 8 status
+
+Tiered submission-automation framework (#8) landed as a skeleton: schema
+field, dispatcher, reference stub. The UI still needs work to surface the
+new return values, and the per-broker scripts are mostly unwritten.
+
+What's in:
+
+- `registry/schemas/broker.schema.json` — optional `automation` block
+  with `tier: auto|semi|manual`, `script: <filename>.py`, and
+  `last_automation_pass: <ISO date>` (bot-filled by CI). Absence of the
+  block = treat as `manual`, identical to `tier=manual`.
+- `core-py/delete_me/automation/` — `base.py` (interfaces +
+  `AutomationUnavailable`), `dispatcher.py`, `scripts/`. The dispatcher
+  never raises for the "no automation configured" case; it returns
+  `SubmissionResult(status="needs_human", evidence_payload={"url": ...})`
+  so the UI can open the broker's web form.
+- `automation/scripts/checkpeople.py` — reference implementation as a
+  **stub**: dry-run returns `submitted`; live raises
+  `AutomationUnavailable` until the real Playwright impl lands. Wired
+  into `registry/brokers/checkpeople.yaml` (the only broker with an
+  `automation:` block today).
+- `delete-me automation-run --broker <id> --dry-run` CLI command that
+  exercises the dispatcher end-to-end.
+- Tests in `core-py/tests/test_automation.py` cover the dispatcher's
+  three branches (unknown broker → ValueError; no automation block →
+  needs_human; auto tier with stub script → submitted on dry-run, needs_human
+  on live).
+
+What's missing:
+
+- **Real per-broker scripts.** The checkpeople stub is the only one;
+  each Tier-A/B broker gets its own follow-up issue per the
+  "5-minute non-coder PR" contract.
+- **Weekly CI health-check** (`automation-health.yml`) that runs each
+  script in `--dry-run`, screenshots the form, and opens a GitHub
+  issue if the success selector stops resolving. The bot-commit path
+  that updates `automation.last_automation_pass` lives here too.
+- **UI integration.** The case-detail page (added in #1) needs a
+  "Submit via automation" action that calls the new CLI command and
+  routes the SubmissionResult — submitted → success toast,
+  needs_human → open the URL, failed → surface fallback_reason.
+- **Per-broker tier audit.** Most of our 50 brokers should land in
+  Tier C (manual) without a YAML change. Tier A candidates probably
+  include checkpeople, publicrecordsnow (no bot gate per the 2026-05-20
+  verification). Tier B candidates include the captcha-gated ones and
+  zoominfo's press-and-hold. None of this is in the registry yet.
+
+The disclaimer/regulation schema work (`regulated_by`, `removal_scope`,
+`disclaimers`) that the Phase 5 tranche-3 verification deferred is a
+separate follow-up to this work — it changes per-broker UX presentation,
+not the submission path itself.
 
 ## Phase 0 acceptance gate
 

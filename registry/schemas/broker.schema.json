@@ -143,6 +143,28 @@
     "notes": {
       "type": "string",
       "description": "Free-form maintainer notes (quirks, gotchas)."
+    },
+    "automation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tier"],
+      "description": "Submission-automation metadata. Omit the block entirely to mean 'manual' (Tier C); the app opens the broker's web form in the user's browser.",
+      "properties": {
+        "tier": {
+          "enum": ["auto", "semi", "manual"],
+          "description": "auto = headless Playwright fills + submits the form (Tier A). semi = Playwright preps the request but waits at a gate (captcha, login, agreement) for the user to clear before resuming (Tier B). manual = bot-gated end-to-end, app opens the browser with prefilled values on the clipboard (Tier C, equivalent to no automation block)."
+        },
+        "script": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*\\.py$",
+          "description": "Filename (relative to core-py/delete_me/automation/scripts/) of the Python module implementing the Submitter interface for this broker. Required when tier in (auto, semi); ignored when tier=manual."
+        },
+        "last_automation_pass": {
+          "type": "string",
+          "format": "date",
+          "description": "ISO date the automation-health CI workflow last confirmed the script's success-page selector still resolves. Bot-committed; do not hand-edit."
+        }
+      }
     }
   }
 }

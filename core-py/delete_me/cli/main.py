@@ -435,5 +435,41 @@ def audit_due_cmd(limit: int) -> None:
     click.echo(json.dumps({"audited": summary, "count": len(summary)}, indent=2))
 
 
+@main.command("automation-run")
+@click.option("--broker", "broker_id", required=True, help="Broker id (e.g., checkpeople).")
+@click.option(
+    "--profile",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=Path("./profile.json"),
+    show_default=True,
+    help="Path to a consumer profile JSON (same shape as `delete-me init` produces).",
+)
+@click.option(
+    "--dry-run/--live",
+    default=True,
+    show_default=True,
+    help=(
+        "Dry-run: scripts fill the form and validate selectors but don't submit. "
+        "Live: scripts submit for real (Tier A) or wait for user gate-clearance (Tier B). "
+        "Use --live only when you're ready for the request to leave your machine."
+    ),
+)
+def automation_run_cmd(broker_id: str, profile: Path, dry_run: bool) -> None:
+    """Dispatch a submission for one broker via the tiered automation framework (#8)."""
+    from delete_me.automation import dispatch  # local import keeps base CLI light
+
+    consumer = _load_profile(profile)
+    result = dispatch(broker_id, consumer, dry_run=dry_run)
+    payload = {
+        "status": result.status,
+        "broker_id": result.broker_id,
+        "dry_run": result.dry_run,
+        "screenshot_path": str(result.screenshot_path) if result.screenshot_path else None,
+        "evidence_payload": result.evidence_payload,
+        "fallback_reason": result.fallback_reason,
+    }
+    click.echo(json.dumps(payload, indent=2))
+
+
 if __name__ == "__main__":  # pragma: no cover
     main()
