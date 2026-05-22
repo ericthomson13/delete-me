@@ -435,6 +435,76 @@ def audit_due_cmd(limit: int) -> None:
     click.echo(json.dumps({"audited": summary, "count": len(summary)}, indent=2))
 
 
+@main.command("automation-health")
+@click.option("--json", "as_json", is_flag=True, help="Emit JSON instead of a human-readable table.")
+@click.option(
+    "--screenshot-dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=None,
+    help=(
+        "If set, scripts that return screenshot_bytes in evidence_payload "
+        "get them written to <dir>/<broker_id>.png; the JSON output points "
+        "at the path instead of carrying raw bytes."
+    ),
+)
+def automation_health_cmd(as_json: bool, screenshot_dir: Path | None) -> None:
+    """Dry-run every Tier-A/B automation script; report status per broker.
+
+    Powers the weekly automation-health CI workflow. Also useful locally
+    to spot scripts broken by upstream form changes.
+    """
+    from delete_me.automation import dispatch  # local import keeps base CLI light
+
+    synthetic = ConsumerProfile(
+        full_legal_name="Automation Health Synthetic Consumer",
+        current_address="1 Test St, Test City, CA 90001",
+        email="health-check@example.invalid",
+    )
+    if screenshot_dir:
+        screenshot_dir.mkdir(parents=True, exist_ok=True)
+
+    rows: list[dict] = []
+    for broker in load_brokers():
+        if broker.automation is None or broker.automation.tier == "manual":
+            continue
+        result = dispatch(broker.id, synthetic, dry_run=True)
+        evidence = dict(result.evidence_payload)
+        screenshot_path: Path | None = None
+        if screenshot_dir and "screenshot_bytes" in evidence:
+            screenshot_path = screenshot_dir / f"{broker.id}.png"
+            screenshot_path.write_bytes(evidence["screenshot_bytes"])
+        # Drop raw bytes from output regardless — they don't belong in JSON.
+        evidence.pop("screenshot_bytes", None)
+        rows.append({
+            "broker_id": broker.id,
+            "tier": broker.automation.tier,
+            "status": result.status,
+            "fallback_reason": result.fallback_reason,
+            "screenshot_path": str(screenshot_path) if screenshot_path else None,
+            "evidence_payload": evidence,
+        })
+
+    if as_json:
+        from datetime import UTC, datetime
+        click.echo(json.dumps(
+            {"rows": rows, "checked_at": datetime.now(UTC).isoformat()},
+            indent=2,
+        ))
+        return
+
+    if not rows:
+        click.echo("No brokers with automation.tier in (auto, semi). Nothing to check.")
+        return
+    fail_count = sum(1 for r in rows if r["status"] != "submitted")
+    for r in rows:
+        marker = "OK " if r["status"] == "submitted" else "FAIL"
+        click.echo(
+            f"{marker}  {r['tier']:4}  {r['broker_id']:30}  {r['status']:12}  "
+            f"{r['fallback_reason'] or ''}"
+        )
+    click.echo(f"\n{len(rows) - fail_count}/{len(rows)} scripts healthy.")
+
+
 @main.command("automation-run")
 @click.option("--broker", "broker_id", required=True, help="Broker id (e.g., checkpeople).")
 @click.option(

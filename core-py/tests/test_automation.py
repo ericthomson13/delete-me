@@ -86,6 +86,31 @@ def test_schema_accepts_brokers_with_and_without_automation_block() -> None:
     assert spokeo.automation is None
 
 
+def test_automation_health_cli_dry_runs_every_tier_a_b_script() -> None:
+    """The automation-health command iterates only auto/semi brokers.
+
+    Today the registry has exactly one (checkpeople with the reference
+    stub). Its dry-run returns status=submitted, so health is 1/1.
+    """
+    from click.testing import CliRunner
+
+    from delete_me.cli.main import main as cli_main
+
+    result = CliRunner().invoke(cli_main, ["automation-health", "--json"])
+    assert result.exit_code == 0, result.output
+    payload = __import__("json").loads(result.output)
+    assert "rows" in payload and "checked_at" in payload
+    assert len(payload["rows"]) >= 1, "checkpeople should be present"
+
+    cp = next((r for r in payload["rows"] if r["broker_id"] == "checkpeople"), None)
+    assert cp is not None
+    assert cp["tier"] == "auto"
+    assert cp["status"] == "submitted"  # stub returns submitted on dry-run
+    assert cp["screenshot_path"] is None  # no --screenshot-dir set
+    # Manual-tier or no-block brokers should NOT appear.
+    assert all(r["tier"] in ("auto", "semi") for r in payload["rows"])
+
+
 def test_automation_unavailable_carries_url_through() -> None:
     """Exception's optional url= override should surface in evidence_payload.
 

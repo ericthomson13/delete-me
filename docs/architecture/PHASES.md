@@ -168,21 +168,37 @@ What's in:
 - Tests in `core-py/tests/test_automation.py` cover the dispatcher's
   three branches (unknown broker → ValueError; no automation block →
   needs_human; auto tier with stub script → submitted on dry-run, needs_human
-  on live).
+  on live), plus the `automation-health` CLI iteration.
+
+Contributor pipeline (#9, commit `f09622b`):
+- `core-py/delete_me/automation/scripts/_TEMPLATE.py` — heavily commented
+  reference module a contributor copies to add a Tier-A/B script.
+- `docs/ADDING_AN_AUTOMATION_SCRIPT.md` — 5-minute-PR walkthrough that
+  mirrors `ADDING_A_BROKER.md` in tone.
+
+Weekly health-check (#10):
+- `delete-me automation-health [--json] [--screenshot-dir DIR]` CLI
+  command iterates every broker with `automation.tier in (auto, semi)`
+  and emits one row per result. Used locally for spot-checks and by CI.
+- `.github/workflows/automation-health.yml` runs the CLI weekly (Mon
+  14:17 UTC), uploads screenshots as artifacts, opens a single GitHub
+  issue per broken script (labeled `automation-broken`, idempotent),
+  and bot-commits a `last_automation_pass` date bump for each script
+  that passed.
+- `.github/scripts/automation_health_followup.py` handles the gh-CLI
+  side effects (label create, idempotent issue open, regex-based YAML
+  date bump that preserves comments and formatting).
 
 What's missing:
 
 - **Real per-broker scripts.** The checkpeople stub is the only one;
   each Tier-A/B broker gets its own follow-up issue per the
   "5-minute non-coder PR" contract.
-- **Weekly CI health-check** (`automation-health.yml`) that runs each
-  script in `--dry-run`, screenshots the form, and opens a GitHub
-  issue if the success selector stops resolving. The bot-commit path
-  that updates `automation.last_automation_pass` lives here too.
 - **UI integration.** The case-detail page (added in #1) needs a
   "Submit via automation" action that calls the new CLI command and
   routes the SubmissionResult — submitted → success toast,
   needs_human → open the URL, failed → surface fallback_reason.
+  Tracked in #11.
 - **Per-broker tier audit.** Most of our 50 brokers should land in
   Tier C (manual) without a YAML change. Tier A candidates probably
   include checkpeople, publicrecordsnow (no bot gate per the 2026-05-20

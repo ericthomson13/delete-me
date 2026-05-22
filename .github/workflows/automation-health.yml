@@ -1,0 +1,92 @@
+# Weekly dry-run of every Tier-A/B automation script. Opens an issue when
+# a script breaks (the broker changed their form); bot-commits a date bump
+# to automation.last_automation_pass when it passes.
+#
+# Per-broker results are visible in the workflow run; broken-script issues
+# are labeled `automation-broken` for triage.
+name: automation-health
+
+on:
+  schedule:
+    # Monday 14:17 UTC. Off-hot-minute deliberately — every cron-at-:00 user
+    # on the planet hits the API at the same instant.
+    - cron: '17 14 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write   # for the date-bump bot commit
+  issues: write     # for opening broken-script issues
+  pull-requests: read
+
+concurrency:
+  group: automation-health
+  cancel-in-progress: true
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Use github.token so the bot commit can push.
+          token: ${{ github.token }}
+          # Need full ref to push back.
+          persist-credentials: true
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Sync deps (with audit extra for Playwright)
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv sync --all-extras
+
+      - name: Install Chromium for Playwright
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run playwright install --with-deps chromium
+
+      - name: Run automation-health
+        id: health
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          mkdir -p /tmp/automation-screenshots
+          uv run delete-me automation-health \
+            --json \
+            --screenshot-dir /tmp/automation-screenshots \
+            > /tmp/health.json
+          # Echo a human-readable summary into the run log as well.
+          uv run delete-me automation-health
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: automation-screenshots
+          path: /tmp/automation-screenshots/
+          if-no-files-found: ignore
+
+      - name: Open issues + bump dates
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run python .github/scripts/automation_health_followup.py /tmp/health.json
+
+      - name: Commit date bumps
+        run: |
+          if git diff --quiet -- registry/brokers/; then
+            echo "no date bumps to commit"
+            exit 0
+          fi
+          count=$(git diff --name-only -- registry/brokers/ | wc -l | tr -d ' ')
+          today=$(date -u +%Y-%m-%d)
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add registry/brokers/
+          git commit -m "chore(automation): bump last_automation_pass for $count script(s) ($today)"
+          git push
