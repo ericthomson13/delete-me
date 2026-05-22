@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { listBrokers, type BrokerRow, type BrokerTier } from '$lib/api';
+  import { listBrokers, type AutomationTier, type BrokerRow, type BrokerTier } from '$lib/api';
 
   let brokers = $state<BrokerRow[]>([]);
   let error = $state<string | null>(null);
@@ -8,12 +8,17 @@
 
   // Filters
   let tierFilter = $state<BrokerTier | 'all'>('all');
+  let automationFilter = $state<AutomationTier | 'none' | 'all'>('all');
   let dropOnly = $state(false);
   let agentOnly = $state(false);
   let query = $state('');
 
   let filtered = $derived(brokers.filter((b) => {
     if (tierFilter !== 'all' && b.tier !== tierFilter) return false;
+    if (automationFilter !== 'all') {
+      if (automationFilter === 'none' && b.automation_tier !== null) return false;
+      if (automationFilter !== 'none' && b.automation_tier !== automationFilter) return false;
+    }
     if (dropOnly && !b.drop_registered) return false;
     if (agentOnly && !b.accepts_authorized_agent) return false;
     if (query) {
@@ -30,10 +35,25 @@
     long_tail: brokers.filter((b) => b.tier === 'long_tail').length,
   });
 
+  let automationCounts = $derived({
+    all: brokers.length,
+    auto: brokers.filter((b) => b.automation_tier === 'auto').length,
+    semi: brokers.filter((b) => b.automation_tier === 'semi').length,
+    manual: brokers.filter((b) => b.automation_tier === 'manual').length,
+    none: brokers.filter((b) => b.automation_tier === null).length,
+  });
+
   function tierLabel(t: BrokerTier | null): string {
     if (t === 'enterprise_aggregator') return 'Enterprise';
     if (t === 'people_search') return 'People search';
     if (t === 'long_tail') return 'Long tail';
+    return '—';
+  }
+
+  function automationLabel(t: AutomationTier | null): string {
+    if (t === 'auto') return 'auto';
+    if (t === 'semi') return 'semi';
+    if (t === 'manual') return 'manual';
     return '—';
   }
 
@@ -101,6 +121,27 @@
       />
     </div>
 
+    <div class="filters">
+      <span class="filter-label">Automation</span>
+      <div class="tier-chips">
+        <button class:active={automationFilter === 'all'} onclick={() => (automationFilter = 'all')}>
+          All <span class="count">{automationCounts.all}</span>
+        </button>
+        <button class:active={automationFilter === 'auto'} onclick={() => (automationFilter = 'auto')}>
+          auto <span class="count">{automationCounts.auto}</span>
+        </button>
+        <button class:active={automationFilter === 'semi'} onclick={() => (automationFilter = 'semi')}>
+          semi <span class="count">{automationCounts.semi}</span>
+        </button>
+        <button class:active={automationFilter === 'manual'} onclick={() => (automationFilter = 'manual')}>
+          manual <span class="count">{automationCounts.manual}</span>
+        </button>
+        <button class:active={automationFilter === 'none'} onclick={() => (automationFilter = 'none')}>
+          none <span class="count">{automationCounts.none}</span>
+        </button>
+      </div>
+    </div>
+
     <p class="result-count">{filtered.length} of {brokers.length} brokers</p>
 
     {#if filtered.length === 0}
@@ -113,6 +154,7 @@
             <th>Name</th>
             <th>Tier</th>
             <th>Methods</th>
+            <th>Auto</th>
             <th>DROP</th>
             <th>Agent</th>
           </tr>
@@ -126,6 +168,7 @@
               <td>
                 {#each b.methods as m (m)}<span class="pill">{m}</span>{/each}
               </td>
+              <td><span class="auto-pill auto-{b.automation_tier ?? 'none'}">{automationLabel(b.automation_tier)}</span></td>
               <td class="check">{b.drop_registered ? '✓' : '—'}</td>
               <td class="check">{b.accepts_authorized_agent ? '✓' : '—'}</td>
             </tr>
@@ -262,6 +305,26 @@
     margin-right: 0.25rem;
     font-size: 0.74rem;
     font-variant-numeric: tabular-nums;
+  }
+
+  .auto-pill {
+    display: inline-block;
+    border-radius: var(--radius-sm);
+    padding: 0.08rem 0.45rem;
+    font-size: 0.74rem;
+    font-weight: 500;
+  }
+  .auto-auto { background: rgba(26, 127, 55, 0.14); color: var(--success); }
+  .auto-semi { background: rgba(154, 103, 0, 0.16); color: #9a6700; }
+  .auto-manual { background: var(--bg-elevated); color: var(--fg-muted); }
+  .auto-none { background: transparent; color: var(--fg-subtle); }
+
+  .filter-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--fg-subtle);
+    margin-right: 0.25rem;
   }
 
   .error { color: var(--error); }

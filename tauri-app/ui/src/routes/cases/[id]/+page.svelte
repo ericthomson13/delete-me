@@ -7,8 +7,10 @@
     runAudit,
     buildEvidence,
     evidenceDownloadUrl,
+    runAutomation,
     type CaseDetail,
     type AuditRow,
+    type AutomationResult,
     type CaseStatus,
   } from '$lib/api';
 
@@ -24,6 +26,11 @@
 
   let buildingEvidence = $state(false);
   let evidenceError = $state<string | null>(null);
+
+  let automationDryRun = $state(true);
+  let automationRunning = $state(false);
+  let automationError = $state<string | null>(null);
+  let automationResult = $state<AutomationResult | null>(null);
 
   async function refresh() {
     try {
@@ -49,6 +56,19 @@
       auditError = e instanceof Error ? e.message : String(e);
     } finally {
       auditing = false;
+    }
+  }
+
+  async function onRunAutomation() {
+    automationError = null;
+    automationResult = null;
+    automationRunning = true;
+    try {
+      automationResult = await runAutomation(caseId, automationDryRun);
+    } catch (e) {
+      automationError = e instanceof Error ? e.message : String(e);
+    } finally {
+      automationRunning = false;
     }
   }
 
@@ -141,6 +161,66 @@
           </div>
         {/if}
       </dl>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>Submission automation</h2>
+        <div class="actions">
+          <label class="toggle">
+            <input type="checkbox" bind:checked={automationDryRun} />
+            Dry-run
+          </label>
+          <button class="secondary" onclick={onRunAutomation} disabled={automationRunning}>
+            {automationRunning ? 'Running…' : 'Run automation'}
+          </button>
+        </div>
+      </div>
+      {#if automationError}<p class="error">{automationError}</p>{/if}
+      {#if automationResult}
+        {#if automationResult.status === 'submitted'}
+          <div class="callout pos">
+            <strong>{automationResult.dry_run ? 'Dry-run succeeded' : 'Submitted'}</strong>
+            — the dispatcher reports
+            <code>status="submitted"</code> for broker
+            <code>{automationResult.broker_id}</code>.
+            {#if automationResult.dry_run}
+              Switch off Dry-run and re-run to actually submit.
+            {/if}
+          </div>
+        {:else if automationResult.status === 'needs_human'}
+          <div class="callout warn">
+            <strong>Human needed</strong> — {automationResult.fallback_reason ?? 'gate detected'}
+            {#if automationResult.evidence_payload?.url}
+              <div class="callout-actions">
+                <a
+                  class="secondary"
+                  href={String(automationResult.evidence_payload.url)}
+                  target="_blank"
+                  rel="noopener"
+                >Open in browser ↗</a>
+              </div>
+            {/if}
+          </div>
+        {:else}
+          <div class="callout neg">
+            <strong>Script failed</strong> — {automationResult.fallback_reason ?? '(no detail)'}
+            <div class="callout-actions">
+              <a
+                class="secondary"
+                href={`https://github.com/ericthomson13/delete-me/issues/new?title=${encodeURIComponent('[automation] ' + automationResult.broker_id + ' script broken')}&labels=automation-broken&body=${encodeURIComponent('Status: ' + automationResult.status + '\nFallback reason: ' + (automationResult.fallback_reason ?? '(none)'))}`}
+                target="_blank"
+                rel="noopener"
+              >Report broken script ↗</a>
+            </div>
+          </div>
+        {/if}
+      {:else if !automationRunning}
+        <p class="empty">
+          Hit "Run automation" to dispatch via the per-broker script.
+          Dry-run is the default — submits nothing, just validates the flow.
+        </p>
+      {/if}
     </section>
 
     <section>
@@ -376,6 +456,37 @@
 
   .empty { color: var(--fg-muted); font-size: 0.9rem; }
   .error { color: var(--error); font-size: 0.85rem; }
+
+  .toggle {
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    cursor: pointer;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .toggle input { accent-color: var(--accent); margin: 0; }
+
+  .callout {
+    border: 1px solid var(--border);
+    border-left-width: 4px;
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+  .callout strong { font-weight: 600; }
+  .callout code {
+    background: var(--bg-elevated);
+    padding: 0.1rem 0.3rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+  }
+  .callout.pos { border-left-color: var(--success); background: rgba(26, 127, 55, 0.06); }
+  .callout.warn { border-left-color: #9a6700; background: rgba(154, 103, 0, 0.07); }
+  .callout.neg { border-left-color: var(--error); background: rgba(207, 34, 46, 0.06); }
+  .callout-actions { margin-top: 0.5rem; }
 
   pre.letter {
     background: var(--bg-elevated);

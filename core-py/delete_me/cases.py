@@ -300,4 +300,5 @@ def brokers_summary() -> Iterable[dict]:
             "user_submit_only": b.user_submit_only,
             "methods": list(b.opt_out.methods),
             "drop_registered": b.opt_out.drop_registered,
+            "automation_tier": b.automation.tier if b.automation else None,
         }

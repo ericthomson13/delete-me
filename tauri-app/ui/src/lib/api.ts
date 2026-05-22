@@ -116,6 +116,32 @@ export async function evidenceDownloadUrl(id: number): Promise<string> {
   return `${base}/cases/${id}/evidence/download`;
 }
 
+export type AutomationTier = 'auto' | 'semi' | 'manual';
+export type AutomationStatus = 'submitted' | 'needs_human' | 'failed';
+
+export interface AutomationResult {
+  status: AutomationStatus;
+  broker_id: string;
+  dry_run: boolean;
+  screenshot_path: string | null;
+  evidence_payload: Record<string, unknown>;
+  fallback_reason: string | null;
+}
+
+export async function runAutomation(caseId: number, dryRun: boolean): Promise<AutomationResult> {
+  const base = await apiBase();
+  const res = await fetch(`${base}/cases/${caseId}/automation-run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dry_run: dryRun }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`POST /cases/${caseId}/automation-run failed: ${res.status} — ${text}`);
+  }
+  return (await res.json()) as AutomationResult;
+}
+
 export type BrokerTier = 'enterprise_aggregator' | 'people_search' | 'long_tail';
 export type OptOutMethod = 'email' | 'web_form' | 'postal' | 'drop' | 'phone';
 
@@ -127,6 +153,7 @@ export interface BrokerRow {
   user_submit_only: boolean;
   methods: OptOutMethod[];
   drop_registered: boolean | null;
+  automation_tier: AutomationTier | null;
 }
 
 export async function listBrokers(): Promise<BrokerRow[]> {
