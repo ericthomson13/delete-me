@@ -22,17 +22,52 @@ export async function apiBase(): Promise<string> {
   return cached;
 }
 
+export type CaseStatus =
+  | 'draft'
+  | 'sent_dry_run'
+  | 'sent'
+  | 'sent_via_drop'
+  | 'acknowledged'
+  | 'deleted_confirmed'
+  | 'audit_inconclusive'
+  | 'noncompliant'
+  | 'failed';
+
 export interface CaseRow {
   id: number;
   profile_id: number;
   broker_id: string;
-  status: string;
+  status: CaseStatus;
   created_at: string | null;
   sent_at: string | null;
   audit_due_at: string | null;
+  last_audited_at: string | null;
   transport_message_id: string | null;
   agent_designation_sha256: string | null;
   last_error: string | null;
+  evidence_path: string | null;
+}
+
+export interface CaseDetail extends CaseRow {
+  letter_markdown: string;
+}
+
+export interface AuditRow {
+  id: number;
+  source: string;
+  found: boolean;
+  inconclusive: boolean;
+  listings_url: string | null;
+  notes: string | null;
+  checked_at: string;
+}
+
+export interface EvidenceBuildResult {
+  case_id: number;
+  directory: string;
+  zip: string;
+  manifest: string;
+  file_count: number;
 }
 
 export async function listCases(): Promise<CaseRow[]> {
@@ -40,6 +75,45 @@ export async function listCases(): Promise<CaseRow[]> {
   const res = await fetch(`${base}/cases`);
   if (!res.ok) throw new Error(`GET /cases failed: ${res.status}`);
   return (await res.json()) as CaseRow[];
+}
+
+export async function getCase(id: number): Promise<CaseDetail> {
+  const base = await apiBase();
+  const res = await fetch(`${base}/cases/${id}`);
+  if (!res.ok) throw new Error(`GET /cases/${id} failed: ${res.status}`);
+  return (await res.json()) as CaseDetail;
+}
+
+export async function listCaseAudits(id: number): Promise<AuditRow[]> {
+  const base = await apiBase();
+  const res = await fetch(`${base}/cases/${id}/audits`);
+  if (!res.ok) throw new Error(`GET /cases/${id}/audits failed: ${res.status}`);
+  return (await res.json()) as AuditRow[];
+}
+
+export async function runAudit(id: number): Promise<{ results: AuditRow[] }> {
+  const base = await apiBase();
+  const res = await fetch(`${base}/cases/${id}/audit`, { method: 'POST' });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`POST /cases/${id}/audit failed: ${res.status} — ${text}`);
+  }
+  return (await res.json()) as { results: AuditRow[] };
+}
+
+export async function buildEvidence(id: number): Promise<EvidenceBuildResult> {
+  const base = await apiBase();
+  const res = await fetch(`${base}/cases/${id}/evidence`, { method: 'POST' });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`POST /cases/${id}/evidence failed: ${res.status} — ${text}`);
+  }
+  return (await res.json()) as EvidenceBuildResult;
+}
+
+export async function evidenceDownloadUrl(id: number): Promise<string> {
+  const base = await apiBase();
+  return `${base}/cases/${id}/evidence/download`;
 }
 
 export type BrokerTier = 'enterprise_aggregator' | 'people_search' | 'long_tail';

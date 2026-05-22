@@ -42,8 +42,8 @@
       </thead>
       <tbody>
         {#each cases as c (c.id)}
-          <tr>
-            <td>{c.id}</td>
+          <tr class="row" onclick={() => (window.location.href = `/cases/${c.id}`)}>
+            <td>#{c.id}</td>
             <td><code>{c.broker_id}</code></td>
             <td>{c.status}</td>
             <td>{c.sent_at ?? '—'}</td>
@@ -73,6 +73,8 @@
     padding: 0.55rem 0.75rem;
     border-bottom: 1px solid var(--border);
   }
+  tr.row { cursor: pointer; transition: background 80ms; }
+  tr.row:hover { background: var(--bg-hover); }
   th {
     font-weight: 600;
     background: var(--bg-elevated);

@@ -275,9 +275,11 @@ def case_as_dict(case: Case) -> dict:
         "created_at": case.created_at.isoformat() if case.created_at else None,
         "sent_at": case.sent_at.isoformat() if case.sent_at else None,
         "audit_due_at": case.audit_due_at.isoformat() if case.audit_due_at else None,
+        "last_audited_at": case.last_audited_at.isoformat() if case.last_audited_at else None,
         "transport_message_id": case.transport_message_id,
         "agent_designation_sha256": case.agent_designation_sha256,
         "last_error": case.last_error,
+        "evidence_path": case.evidence_path,
     }
 
 
