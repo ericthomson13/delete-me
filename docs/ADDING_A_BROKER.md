@@ -2,6 +2,10 @@
 
 This is a 5-minute PR. You do not need to write code.
 
+> Adding submission *automation* for a broker that's already in the
+> registry? See [`ADDING_AN_AUTOMATION_SCRIPT.md`](ADDING_AN_AUTOMATION_SCRIPT.md)
+> instead.
+
 ## 1. Copy this template
 
 Save as `registry/brokers/<broker_slug>.yaml`. The filename's stem (without
