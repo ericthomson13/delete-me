@@ -7,15 +7,27 @@ from delete_me.db import Case
 from delete_me.evidence import PackageBuilder
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
+from platformdirs import user_data_path
 from sqlmodel import Session
 
 from ._deps import get_session
 
 router = APIRouter(prefix="/cases", tags=["evidence"])
 
-_DEFAULT_OUT = Path(
-    os.environ.get("DELETE_ME_EVIDENCE_DIR", "/var/lib/delete-me/evidence")
-)
+ENV_OUT_DIR = "DELETE_ME_EVIDENCE_DIR"
+
+
+def _evidence_dir() -> Path:
+    """User-writable evidence directory.
+
+    Defaults to platformdirs' per-user data path so the desktop app works
+    out of the box on macOS/Linux/Windows without sudo. Override via
+    DELETE_ME_EVIDENCE_DIR for server deployments (e.g. /var/lib/delete-me).
+    """
+    override = os.environ.get(ENV_OUT_DIR)
+    if override:
+        return Path(override)
+    return user_data_path("delete-me", "delete-me") / "evidence"
 
 
 @router.post("/{case_id}/evidence")
@@ -23,8 +35,9 @@ def build_evidence(case_id: int, session: Session = Depends(get_session)) -> dic
     case = session.get(Case, case_id)
     if not case:
         raise HTTPException(404, f"case {case_id} not found")
-    _DEFAULT_OUT.mkdir(parents=True, exist_ok=True)
-    builder = PackageBuilder(out_dir=_DEFAULT_OUT)
+    out_dir = _evidence_dir()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    builder = PackageBuilder(out_dir=out_dir)
     pkg = builder.build(session, case)
     return {
         "case_id": pkg.case_id,
