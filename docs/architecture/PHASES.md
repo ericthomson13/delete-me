@@ -234,15 +234,23 @@ What's in:
   no-source / no-adapter / adapter-raises / cache-hit / cache-expired
   using the existing `MockAuditAdapter`.
 
+Service surface (shipped in the same tranche):
+
+- `POST /profiles/{id}/presence-check` — body `{broker_ids?, fresh_days?}`;
+  returns `{results, summary}`.
+- `GET /profiles/{id}/presence-results` — latest stored row per (broker,
+  source); no re-query. Optional `?broker_id=` filter.
+- `DELETE_ME_AUDIT_USE_MOCK=1` swaps the registry for tests/demos.
+
 What's missing (explicit scope cutoffs):
 
 - **Adapter coverage.** Today only `truepeoplesearch_search` is wired in
-  `production_registry()`. Most broker YAMLs still have `audit_sources: []`
-  and will surface in the footer as uncheckable. Adding adapters is the
-  next leverage point and is tracked separately from this phase.
-- **Service / Tauri surface.** CLI-only for MVP. The FastAPI service and
-  the desktop app can mirror in a follow-up; the orchestrator + table are
-  reusable as-is.
+  `production_registry()`. 16 broker YAMLs declare audit_sources they'd
+  like an adapter for; 34 brokers correctly have `audit_sources: []`
+  (enterprise aggregators with no public search). Adding adapters is the
+  next leverage point and tracked separately.
+- **Tauri surface.** Desktop UI doesn't have a Discovery view yet. Wire
+  through the new service endpoints in a follow-up.
 
 ## Phase 10 status
 
@@ -287,10 +295,20 @@ What's in:
   collapse / DeHashed credit-exhaustion / Pwned Passwords prefix-only
   contract) plus the multi-provider discovery and mid-run-disable logic.
 
+Service surface (shipped in the same tranche):
+
+- `GET /breaches/providers` — discover configured providers + setup hints.
+- `POST /profiles/{id}/breach-check` — body `{emails?}`; returns
+  `{results, providers}`. Returns 503 with provider setup hints when
+  none are configured.
+- `POST /passwords/check` — body `{password}`; returns
+  `{breach_count, found}`. The password reaches the service but only
+  the SHA-1 prefix leaves the service. Over public networks, call only
+  via TLS.
+
 What's missing:
 
-- **Service / Tauri surface.** CLI-only for now; the orchestrator and
-  adapters are pure-Python and reusable as-is.
+- **Tauri surface.** Same story as Phase 9 — service is ready, UI isn't.
 - **Tor-style anonymization for IntelX / DeHashed lookups.** HIBP gets
   the k-anonymity treatment via the password endpoint, but the email
   endpoints on all three send the actual email. Out of scope for MVP.

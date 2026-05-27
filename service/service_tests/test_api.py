@@ -173,3 +173,160 @@ def test_drop_submit_happy_path(
     assert len(body["cases"]) == 1
     assert body["cases"][0]["status"] == "sent_via_drop"
     assert body["cases"][0]["transport_message_id"] == body["receipt"]["receipt_id"]
+
+
+# ---------------------------------------------------------------- presence-check
+
+def _seed_profile(client: TestClient, email: str = "jane@example.com") -> int:
+    r = client.post(
+        "/profiles",
+        json={
+            "full_legal_name": "Jane Q. Doe",
+            "current_address": "123 Main St, Portland OR 97201",
+            "email": email,
+        },
+    )
+    assert r.status_code == 200, r.text
+    return r.json()["id"]
+
+
+def test_presence_check_persists_results(client: TestClient, monkeypatch):
+    """Force the mock adapter registry so we don't hit the network."""
+    monkeypatch.setenv("DELETE_ME_AUDIT_USE_MOCK", "1")
+    profile_id = _seed_profile(client)
+
+    # With every broker having audit_sources=[] OR sources the mock registry
+    # doesn't know about, the response should still be 200 with a summary.
+    r = client.post(f"/profiles/{profile_id}/presence-check", json={"broker_ids": ["spokeo"]})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert "results" in body and "summary" in body
+    assert body["summary"]["brokers_checked"] == 1
+
+
+def test_presence_check_unknown_broker_400(client: TestClient, monkeypatch):
+    monkeypatch.setenv("DELETE_ME_AUDIT_USE_MOCK", "1")
+    profile_id = _seed_profile(client)
+    r = client.post(
+        f"/profiles/{profile_id}/presence-check",
+        json={"broker_ids": ["does-not-exist"]},
+    )
+    assert r.status_code == 400
+    assert "does-not-exist" in r.text
+
+
+def test_presence_check_404_for_missing_profile(client: TestClient, monkeypatch):
+    monkeypatch.setenv("DELETE_ME_AUDIT_USE_MOCK", "1")
+    r = client.post("/profiles/9999/presence-check", json={})
+    assert r.status_code == 404
+
+
+def test_list_presence_results_empty_then_populated(client: TestClient, monkeypatch):
+    monkeypatch.setenv("DELETE_ME_AUDIT_USE_MOCK", "1")
+    profile_id = _seed_profile(client)
+
+    r = client.get(f"/profiles/{profile_id}/presence-results")
+    assert r.status_code == 200
+    assert r.json() == []
+
+    client.post(f"/profiles/{profile_id}/presence-check", json={"broker_ids": ["spokeo"]})
+
+    r = client.get(f"/profiles/{profile_id}/presence-results")
+    assert r.status_code == 200
+    assert len(r.json()) >= 1
+
+
+# ------------------------------------------------------------ breach + password
+
+def test_breaches_providers_lists_all_three(client: TestClient, monkeypatch):
+    for var in ("HIBP_API_KEY", "INTELX_API_KEY", "DEHASHED_USERNAME", "DEHASHED_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+    r = client.get("/breaches/providers")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["active"] == []
+    source_ids = {p["source_id"] for p in body["providers"]}
+    assert source_ids == {"hibp", "intelx", "dehashed"}
+    assert all(not p["available"] for p in body["providers"])
+
+
+def test_breach_check_503_when_no_providers(client: TestClient, monkeypatch):
+    for var in ("HIBP_API_KEY", "INTELX_API_KEY", "DEHASHED_USERNAME", "DEHASHED_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+    profile_id = _seed_profile(client)
+    r = client.post(f"/profiles/{profile_id}/breach-check", json={})
+    assert r.status_code == 503
+    detail = r.json()["detail"]
+    assert detail["error"] == "no breach providers configured"
+    assert {p["source_id"] for p in detail["providers"]} == {"hibp", "intelx", "dehashed"}
+
+
+def test_breach_check_with_mock_provider(client: TestClient, monkeypatch):
+    """Configure HIBP via env + monkeypatch its httpx client to a stub."""
+    import httpx
+    from delete_me.breaches import hibp as hibp_mod
+
+    monkeypatch.setenv("HIBP_API_KEY", "test-key")
+    monkeypatch.delenv("INTELX_API_KEY", raising=False)
+    monkeypatch.delenv("DEHASHED_USERNAME", raising=False)
+    monkeypatch.delenv("DEHASHED_API_KEY", raising=False)
+
+    class _Stub:
+        def get(self, url, params=None):
+            import json as _json
+            return httpx.Response(
+                status_code=200,
+                content=_json.dumps([{
+                    "Name": "Adobe",
+                    "BreachDate": "2013-10-04",
+                    "DataClasses": ["Email addresses"],
+                    "Description": "A breach.",
+                }]).encode(),
+                request=httpx.Request("GET", url),
+            )
+
+    real_init = hibp_mod.HIBPAdapter.__init__
+
+    def _patched(self, api_key=None, client=None):
+        real_init(self, api_key=api_key or "test-key", client=_Stub())
+
+    monkeypatch.setattr(hibp_mod.HIBPAdapter, "__init__", _patched)
+
+    profile_id = _seed_profile(client)
+    r = client.post(f"/profiles/{profile_id}/breach-check", json={})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["providers"]["active"] == ["hibp"]
+    skipped = {s["source_id"] for s in body["providers"]["skipped_at_startup"]}
+    assert skipped == {"intelx", "dehashed"}
+    rows = next(iter(body["results"].values()))
+    assert rows[0]["breach_name"] == "Adobe"
+
+
+def test_password_check(client: TestClient, monkeypatch):
+    import hashlib
+
+    import httpx
+    from delete_me.breaches import passwords as passwords_mod
+
+    sha1 = hashlib.sha1(b"hunter2").hexdigest().upper()
+    suffix = sha1[5:]
+
+    class _Stub:
+        def get(self, url):
+            return httpx.Response(
+                status_code=200,
+                content=f"{suffix}:99\n".encode(),
+                request=httpx.Request("GET", url),
+            )
+
+    real_init = passwords_mod.PwnedPasswordsClient.__init__
+
+    def _patched(self, client=None):
+        real_init(self, client=_Stub())
+
+    monkeypatch.setattr(passwords_mod.PwnedPasswordsClient, "__init__", _patched)
+
+    r = client.post("/passwords/check", json={"password": "hunter2"})
+    assert r.status_code == 200
+    assert r.json() == {"breach_count": 99, "found": True}
