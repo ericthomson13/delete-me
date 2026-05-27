@@ -1,0 +1,65 @@
+# Weekly real-network probe of every audit adapter in production_registry.
+# Opens an issue when an adapter regresses (HTML changed, anti-bot
+# tightened, network broke). No file edits or bot commits — adapters
+# don't carry a last-pass field today.
+#
+# Per-source results are visible in the workflow run; broken-adapter
+# issues are labeled `audit-adapter-broken` for triage.
+name: audit-adapter-health
+
+on:
+  schedule:
+    # Tuesday 14:23 UTC. Off-peak minute, separate day from
+    # automation-health (Mon) to keep the broker IPs spaced out.
+    - cron: '23 14 * * 2'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: audit-adapter-health
+  cancel-in-progress: true
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Sync deps
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv sync --all-extras
+
+      - name: Run audit-adapter-health
+        id: health
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run delete-me audit-adapter-health --json > /tmp/audit-health.json
+          # Echo a human-readable summary into the run log as well.
+          uv run delete-me audit-adapter-health
+
+      - name: Upload JSON report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-adapter-health-report
+          path: /tmp/audit-health.json
+          if-no-files-found: ignore
+
+      - name: Open issues for regressions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run python .github/scripts/audit_adapter_health_followup.py /tmp/audit-health.json

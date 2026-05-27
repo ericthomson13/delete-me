@@ -148,6 +148,58 @@ def test_password_check_stdin_found(cli_env, monkeypatch):
         assert "1,234" in result.output
 
 
+def test_audit_adapter_health_reports_each_adapter(cli_env, monkeypatch):
+    """Replace production_registry with a deterministic mix so we can assert
+    the three non-healthy statuses (blocked / false_positive / error) plus
+    healthy in one run."""
+    from delete_me.audit.orchestrator import production_registry as _prod
+    from delete_me.audit.sources.base import AuditAdapter, ListingResult
+
+    class _Healthy(AuditAdapter):
+        source_id = "healthy_src"
+        def search(self, q):
+            return ListingResult(source=self.source_id, found=False, inconclusive=False, notes="ok")
+
+    class _Blocked(AuditAdapter):
+        source_id = "blocked_src"
+        def search(self, q):
+            return ListingResult(source=self.source_id, found=False, inconclusive=True, notes="bot block")
+
+    class _FalsePositive(AuditAdapter):
+        source_id = "fp_src"
+        def search(self, q):
+            return ListingResult(source=self.source_id, found=True, inconclusive=False, notes="matched something")
+
+    class _Boom(AuditAdapter):
+        source_id = "boom_src"
+        def search(self, q):
+            raise RuntimeError("kapow")
+
+    fake = {
+        "healthy_src": _Healthy(),
+        "blocked_src": _Blocked(),
+        "fp_src": _FalsePositive(),
+        "boom_src": _Boom(),
+    }
+    # Patch in cli.main's namespace too — the command imports locally.
+    monkeypatch.setattr(
+        "delete_me.audit.orchestrator.production_registry", lambda: fake
+    )
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(main, ["audit-adapter-health", "--json"])
+        assert result.exit_code == 0, result.output
+        payload = json.loads(result.output)
+        statuses = {r["source_id"]: r["status"] for r in payload["rows"]}
+        assert statuses == {
+            "healthy_src": "healthy",
+            "blocked_src": "blocked",
+            "fp_src": "false_positive",
+            "boom_src": "error",
+        }
+
+
 def test_password_check_stdin_not_found(cli_env, monkeypatch):
     class _StubClient:
         def get(self, url):

@@ -742,6 +742,77 @@ def audit_due_cmd(limit: int) -> None:
     click.echo(json.dumps({"audited": summary, "count": len(summary)}, indent=2))
 
 
+@main.command("audit-adapter-health")
+@click.option("--json", "as_json", is_flag=True, help="Emit JSON instead of a human-readable table.")
+def audit_adapter_health_cmd(as_json: bool) -> None:
+    """Dry-run every audit adapter against a synthetic profile; report status per source.
+
+    Powers a weekly CI workflow that catches adapter regressions when a
+    broker changes its HTML. An adapter is "healthy" when it returns a
+    real response with inconclusive=False AND found=False for a name that
+    cannot exist in any broker's index.
+    """
+    from datetime import UTC, datetime
+
+    from delete_me.audit.orchestrator import production_registry
+    from delete_me.audit.sources.base import AuditQuery
+
+    # Deliberately weird so no broker can legitimately have a match.
+    synthetic = AuditQuery(
+        full_name="DeleteMe Health-Check ZzzNotARealPerson",
+        current_city="Springfield",
+        current_state="OR",
+        dob_year=None,
+    )
+
+    rows: list[dict] = []
+    for source_id, adapter in production_registry().items():
+        try:
+            result = adapter.search(synthetic)
+        except Exception as exc:  # noqa: BLE001 — never let an adapter crash the sweep
+            rows.append({
+                "source_id": source_id,
+                "status": "error",
+                "notes": f"adapter raised: {exc}",
+                "listings_url": None,
+            })
+            continue
+
+        if result.inconclusive:
+            status = "blocked"
+        elif result.found:
+            # The synthetic name shouldn't match anything; if it does, our
+            # name-match heuristic is broken (false positives are dangerous).
+            status = "false_positive"
+        else:
+            status = "healthy"
+
+        rows.append({
+            "source_id": source_id,
+            "status": status,
+            "notes": result.notes,
+            "listings_url": result.listings_url,
+        })
+
+    if as_json:
+        click.echo(json.dumps(
+            {"rows": rows, "checked_at": datetime.now(UTC).isoformat()},
+            indent=2,
+        ))
+        return
+
+    if not rows:
+        click.echo("No audit adapters wired in production_registry().")
+        return
+    fail_count = sum(1 for r in rows if r["status"] != "healthy")
+    for r in rows:
+        marker = "OK  " if r["status"] == "healthy" else "FAIL"
+        click.echo(
+            f"{marker}  {r['source_id']:30}  {r['status']:14}  {r['notes'] or ''}"
+        )
+    click.echo(f"\n{len(rows) - fail_count}/{len(rows)} adapters healthy.")
+
+
 @main.command("automation-health")
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON instead of a human-readable table.")
 @click.option(
