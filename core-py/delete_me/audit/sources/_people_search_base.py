@@ -1,5 +1,12 @@
 """Shared base for people-search-style audit adapters.
 
+Rate-limit override: set DELETE_ME_AUDIT_RATE_LIMIT_S to override the
+default 60-second per-instance min interval across every adapter in this
+family. Useful for development (drop to 0) or operators who've validated
+their IP isn't being rate-limited by a given broker. Values <0 are
+clamped to 0.
+
+
 Every adapter in this family does the same dance:
 
 1. Build a search URL from the consumer's name + city/state.
@@ -25,11 +32,27 @@ adapter never blocks a user's case status.
 from __future__ import annotations
 
 import logging
+import os
 import re
 import time
 from urllib.parse import quote_plus
 
 import httpx
+
+
+RATE_LIMIT_ENV = "DELETE_ME_AUDIT_RATE_LIMIT_S"
+
+
+def _resolve_min_interval(class_default: float) -> float:
+    """Honor DELETE_ME_AUDIT_RATE_LIMIT_S as a global override."""
+    raw = os.environ.get(RATE_LIMIT_ENV)
+    if raw is None or raw == "":
+        return class_default
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        LOG.warning("ignoring invalid %s=%r (must be a number)", RATE_LIMIT_ENV, raw)
+        return class_default
 
 from .base import AuditAdapter, AuditQuery, ListingResult
 
@@ -85,11 +108,14 @@ class PeopleSearchAdapter(AuditAdapter):
             follow_redirects=True,
         )
         self._last_request_at: float = 0.0
+        # Resolved at construction so a long-lived adapter doesn't re-read the
+        # env var on every search. Tests can poke this attribute directly.
+        self.min_interval_s: float = _resolve_min_interval(self.MIN_INTERVAL_S)
 
     def _maybe_sleep(self) -> None:
         elapsed = time.monotonic() - self._last_request_at
-        if elapsed < self.MIN_INTERVAL_S:
-            time.sleep(self.MIN_INTERVAL_S - elapsed)
+        if elapsed < self.min_interval_s:
+            time.sleep(self.min_interval_s - elapsed)
 
     def format_location(self, query: AuditQuery) -> str:
         if query.current_city and query.current_state:

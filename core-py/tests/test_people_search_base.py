@@ -129,6 +129,47 @@ def test_custom_card_class_pattern():
     assert result.found is True
 
 
+def test_rate_limit_env_overrides_class_default(monkeypatch):
+    """DELETE_ME_AUDIT_RATE_LIMIT_S replaces MIN_INTERVAL_S at construction."""
+    monkeypatch.setenv("DELETE_ME_AUDIT_RATE_LIMIT_S", "0")
+    adapter = _StubAdapter(client=_FakeClient([_response(200, "")]))
+    assert adapter.min_interval_s == 0.0
+
+    # Subclass default is also overridden, not just the base class.
+    class _Slow(PeopleSearchAdapter):
+        source_id = "slow"
+        SEARCH_URL_TEMPLATE = "https://example.com/?n={name}&l={location}"
+        MIN_INTERVAL_S = 300.0
+
+    slow = _Slow(client=_FakeClient([_response(200, "")]))
+    assert slow.min_interval_s == 0.0
+
+
+def test_rate_limit_env_invalid_value_falls_back_to_class_default(monkeypatch, caplog):
+    """An unparseable value logs and uses the class default."""
+    monkeypatch.setenv("DELETE_ME_AUDIT_RATE_LIMIT_S", "not-a-number")
+
+    class _Slow(PeopleSearchAdapter):
+        source_id = "slow"
+        SEARCH_URL_TEMPLATE = "https://example.com/?n={name}&l={location}"
+        MIN_INTERVAL_S = 300.0
+
+    slow = _Slow(client=_FakeClient([_response(200, "")]))
+    assert slow.min_interval_s == 300.0
+
+
+def test_rate_limit_env_unset_uses_class_default(monkeypatch):
+    monkeypatch.delenv("DELETE_ME_AUDIT_RATE_LIMIT_S", raising=False)
+
+    class _Slow(PeopleSearchAdapter):
+        source_id = "slow"
+        SEARCH_URL_TEMPLATE = "https://example.com/?n={name}&l={location}"
+        MIN_INTERVAL_S = 7.0
+
+    slow = _Slow(client=_FakeClient([_response(200, "")]))
+    assert slow.min_interval_s == 7.0
+
+
 def test_extra_block_markers_per_subclass():
     class _Custom(PeopleSearchAdapter):
         source_id = "stub3"

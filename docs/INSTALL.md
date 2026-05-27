@@ -109,6 +109,7 @@ All env vars are optional. Without them, the tool stays in safe defaults
 | `HIBP_API_KEY` | `breach-check` (HIBP provider) | HIBP skipped; setup hint shown in the breach-check footer |
 | `INTELX_API_KEY` (optional `INTELX_BASE_URL`) | `breach-check` (IntelX provider) | IntelX skipped; setup hint shown |
 | `DEHASHED_USERNAME` + `DEHASHED_API_KEY` | `breach-check` (DeHashed provider) | DeHashed skipped; setup hint shown |
+| `DELETE_ME_AUDIT_RATE_LIMIT_S` | every audit adapter (`presence-check`, `audit`, `audit-adapter-health`) | 60s per-instance interval; invalid value logs + falls back |
 
 For provider-by-provider trade-offs and signup links, see
 [`USER_GUIDE.md` → Discovery](USER_GUIDE.md#6b-discovery--find-out-where-youre-exposed-optional).
