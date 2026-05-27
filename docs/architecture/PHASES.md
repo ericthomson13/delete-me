@@ -331,10 +331,11 @@ Service surface (shipped in the same tranche):
 
 What's missing:
 
-- **Tauri surface.** Same story as Phase 9 — service is ready, UI isn't.
-- **Tor-style anonymization for IntelX / DeHashed lookups.** HIBP gets
-  the k-anonymity treatment via the password endpoint, but the email
-  endpoints on all three send the actual email. Out of scope for MVP.
+- **Tor-style anonymization for breach email lookups.** Scoped proposal
+  at `architecture/proposals/tor-proxy-for-breach-lookups.md`.
+  Recommendation: don't build today (narrow user value, exit-IP blocking
+  defeats the working case). Revisit when a concrete threat model
+  surfaces or HIBP adds a k-anonymity breach endpoint.
 
 ## Phase 0 acceptance gate
 
