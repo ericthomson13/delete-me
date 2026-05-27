@@ -9,9 +9,9 @@ can close when it lands.
 
 ### Phase 4 — Tauri desktop
 
-- [ ] [#1](https://github.com/ericthomson13/delete-me/issues/1) — Build out UI screens beyond case list (profiles / brokers / audits / evidence)
+- [ ] [#1](https://github.com/ericthomson13/delete-me/issues/1) — Build out UI screens beyond case list (profiles / brokers / audits / evidence). *Profiles, brokers, and discovery views shipped (2026-05-27); top-level audits and evidence index pages still pending.*
 - [ ] [#2](https://github.com/ericthomson13/delete-me/issues/2) — Replace placeholder icons with real product artwork
-- [ ] [#3](https://github.com/ericthomson13/delete-me/issues/3) — First-run argon2id passphrase / SQLite encryption
+- [ ] [#3](https://github.com/ericthomson13/delete-me/issues/3) — First-run argon2id passphrase / SQLite encryption *(decision: SQLCipher + OS keychain hybrid, see deposited research)*
 
 ### Phase 5 — Eastern states / top-50 broker coverage
 
@@ -38,5 +38,13 @@ can close when it lands.
 
 ## Shipped phases
 
-See [`architecture/PHASES.md`](architecture/PHASES.md) — Phases 0–3 are
-✅ shipped (foundation, service + send, audit MVP, evidence package).
+See [`architecture/PHASES.md`](architecture/PHASES.md) for the narrative. Status summary:
+
+- ✅ **Phase 0** — Foundation (registry, letter engine, agent form, CLI)
+- ✅ **Phase 1** — Service + Send (FastAPI, SQLModel, Postmark, docker)
+- ✅ **Phase 2** — Audit MVP (orchestrator, mock + experimental real adapters, sweeper)
+- ✅ **Phase 3** — Evidence package (zip with letter, audit findings, CA AG draft)
+- ✅ **Phase 8** — Tiered submission-automation framework (#8) + per-broker template (#9) + weekly automation-health CI (#10) + UI integration (#11)
+- ✅ **Phase 9** — Pre-send presence-check (CLI + `send --check-first` + service API + Tauri Discovery view)
+- ✅ **Phase 10** — Breach-check (HIBP + IntelX + DeHashed) + free k-anonymity password-check (CLI + service API + Tauri Discovery view). Tor-proxy follow-up scoped in [`architecture/proposals/tor-proxy-for-breach-lookups.md`](architecture/proposals/tor-proxy-for-breach-lookups.md) — *not recommended for build today.*
+- ✅ **Adapter rollout** — 16 of 16 declared `audit_sources` have shipped adapters via the shared `PeopleSearchAdapter` base. Weekly `audit-adapter-health` CI files regression issues and bot-commits `audit_sources_last_pass` date bumps.
