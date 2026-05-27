@@ -248,16 +248,19 @@ Adapter coverage (shipped in a follow-up tranche):
   holds the common dance — rate limit, anti-bot detection, name-in-card
   heuristic, HTTP-error → inconclusive fallback. Subclasses are ~3-30
   lines each.
-- 6 broker adapters wired in `production_registry()`: truepeoplesearch,
-  fastpeoplesearch, familytreenow, nuwber, thatsthem, spokeo. Every one
-  is marked experimental — selectors and URL shapes inferred from common
-  patterns and will need tuning against the live sites. Failures degrade
-  to inconclusive, never block a case.
-- 10 brokers still declare audit_sources without an adapter (beenverified,
-  instantcheckmate, intelius, mylife, peekyou, peoplefinder, peoplelooker,
-  radaris, truthfinder, whitepages). Adding each one is now a small PR
-  via the shared base. 34 enterprise-aggregator brokers correctly have
-  `audit_sources: []` and don't need adapters.
+- 16 broker adapters wired in `production_registry()` — every broker
+  YAML that declares audit_sources now has an adapter: truepeoplesearch,
+  fastpeoplesearch, familytreenow, nuwber, thatsthem, spokeo, whitepages,
+  beenverified, peoplefinder, intelius, radaris, instantcheckmate,
+  peoplelooker, truthfinder, peekyou, mylife. Every one is marked
+  experimental — selectors and URL shapes inferred from common patterns
+  and will need tuning against the live sites. Failures degrade to
+  inconclusive, never block a case.
+- 34 enterprise-aggregator brokers correctly have `audit_sources: []` and
+  don't need adapters (no public consumer-facing search).
+- Weekly `audit-adapter-health` GitHub Action probes every adapter
+  against a synthetic profile and files `audit-adapter-broken` issues
+  on regression.
 
 What's missing:
 

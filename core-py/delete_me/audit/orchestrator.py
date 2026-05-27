@@ -191,12 +191,22 @@ def production_registry() -> dict[str, AuditAdapter]:
     at any time (anti-bot, HTML drift). The orchestrator handles that
     gracefully — a single broken adapter never blocks other audits.
     """
+    from .sources.beenverified import BeenVerifiedAdapter
     from .sources.familytreenow import FamilyTreeNowAdapter
     from .sources.fastpeoplesearch import FastPeopleSearchAdapter
+    from .sources.instantcheckmate import InstantCheckmateAdapter
+    from .sources.intelius import InteliusAdapter
+    from .sources.mylife import MyLifeAdapter
     from .sources.nuwber import NuwberAdapter
+    from .sources.peekyou import PeekYouAdapter
+    from .sources.peoplefinder import PeopleFinderAdapter
+    from .sources.peoplelooker import PeopleLookerAdapter
+    from .sources.radaris import RadarisAdapter
     from .sources.spokeo import SpokeoAdapter
     from .sources.thatsthem import ThatsThemAdapter
     from .sources.truepeoplesearch import TruePeopleSearchAdapter
+    from .sources.truthfinder import TruthFinderAdapter
+    from .sources.whitepages import WhitepagesAdapter
 
     return {
         "truepeoplesearch_search": TruePeopleSearchAdapter(),
@@ -205,4 +215,14 @@ def production_registry() -> dict[str, AuditAdapter]:
         "nuwber_search": NuwberAdapter(),
         "thatsthem_search": ThatsThemAdapter(),
         "spokeo_search": SpokeoAdapter(),
+        "whitepages_search": WhitepagesAdapter(),
+        "beenverified_search": BeenVerifiedAdapter(),
+        "peoplefinder_search": PeopleFinderAdapter(),
+        "intelius_search": InteliusAdapter(),
+        "radaris_search": RadarisAdapter(),
+        "instantcheckmate_search": InstantCheckmateAdapter(),
+        "peoplelooker_search": PeopleLookerAdapter(),
+        "truthfinder_search": TruthFinderAdapter(),
+        "peekyou_search": PeekYouAdapter(),
+        "mylife_search": MyLifeAdapter(),
     }
