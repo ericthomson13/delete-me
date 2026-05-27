@@ -303,6 +303,54 @@ def test_breach_check_with_mock_provider(client: TestClient, monkeypatch):
     assert rows[0]["breach_name"] == "Adobe"
 
 
+def test_list_all_audits_aggregates_across_cases(client: TestClient, monkeypatch):
+    """GET /audits returns rows with case + broker context, no per-case filter."""
+    monkeypatch.setenv("DELETE_ME_AUDIT_USE_MOCK", "1")
+    profile_id = _seed_profile(client)
+
+    # Create two cases and run audits against each.
+    for broker in ("spokeo", "whitepages"):
+        r = client.post("/cases", json={"profile_id": profile_id, "broker_id": broker})
+        assert r.status_code == 200, r.text
+        case_id = r.json()["id"]
+        client.post(f"/cases/{case_id}/audit")
+
+    r = client.get("/audits")
+    assert r.status_code == 200, r.text
+    rows = r.json()
+    assert len(rows) >= 2
+    broker_ids = {row["broker_id"] for row in rows}
+    assert "spokeo" in broker_ids and "whitepages" in broker_ids
+    # Each row carries the join'd context.
+    assert all("case_id" in row and "case_status" in row for row in rows)
+
+
+def test_list_evidence_packages_empty_when_none_built(client: TestClient):
+    r = client.get("/evidence")
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+def test_list_evidence_packages_populates_after_build(client: TestClient, monkeypatch):
+    monkeypatch.setenv("DELETE_ME_AUDIT_USE_MOCK", "1")
+    profile_id = _seed_profile(client)
+    case = client.post("/cases", json={"profile_id": profile_id, "broker_id": "spokeo"}).json()
+    case_id = case["id"]
+    # Build an evidence package (writes to platformdirs by default; test
+    # env isolates it via the per-test tmp DB but evidence dir is shared.
+    # We don't care about the path here, just the row.)
+    r = client.post(f"/cases/{case_id}/evidence")
+    assert r.status_code == 200, r.text
+
+    r = client.get("/evidence")
+    assert r.status_code == 200
+    rows = r.json()
+    matches = [row for row in rows if row["case_id"] == case_id]
+    assert len(matches) == 1
+    assert matches[0]["broker_id"] == "spokeo"
+    assert matches[0]["evidence_path"] is not None
+
+
 def test_api_key_unset_allows_all_requests(client: TestClient, monkeypatch):
     """Default behavior: DELETE_ME_API_KEY unset, no auth enforced."""
     monkeypatch.delenv("DELETE_ME_API_KEY", raising=False)

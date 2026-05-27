@@ -9,7 +9,7 @@ can close when it lands.
 
 ### Phase 4 — Tauri desktop
 
-- [ ] [#1](https://github.com/ericthomson13/delete-me/issues/1) — Build out UI screens beyond case list (profiles / brokers / audits / evidence). *Profiles, brokers, and discovery views shipped (2026-05-27); top-level audits and evidence index pages still pending.*
+- [x] [#1](https://github.com/ericthomson13/delete-me/issues/1) — Build out UI screens beyond case list (profiles / brokers / audits / evidence). *Profiles, brokers, discovery, audits, and evidence views all shipped (2026-05-27).*
 - [ ] [#2](https://github.com/ericthomson13/delete-me/issues/2) — Replace placeholder icons with real product artwork
 - [ ] [#3](https://github.com/ericthomson13/delete-me/issues/3) — First-run argon2id passphrase / SQLite encryption *(decision: SQLCipher + OS keychain hybrid, see deposited research)*
 

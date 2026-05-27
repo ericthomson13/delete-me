@@ -73,6 +73,38 @@ def list_case_audits(case_id: int, session: Session = Depends(get_session)) -> l
     ]
 
 
+@router.get("/audits")
+def list_all_audits(
+    limit: int = 200, session: Session = Depends(get_session)
+) -> list[dict]:
+    """Cross-case audit log, newest first, capped at `limit`.
+
+    Each row carries the case + broker context so the UI can show an
+    aggregate audit timeline across every case without 1+N requests.
+    """
+    rows = session.exec(
+        select(AuditResult, Case)
+        .join(Case, AuditResult.case_id == Case.id)
+        .order_by(AuditResult.checked_at.desc())
+        .limit(limit)
+    ).all()
+    return [
+        {
+            "id": r.id,
+            "case_id": r.case_id,
+            "broker_id": c.broker_id,
+            "case_status": c.status.value,
+            "source": r.source,
+            "found": r.found,
+            "inconclusive": r.inconclusive,
+            "listings_url": r.listings_url,
+            "notes": r.notes,
+            "checked_at": r.checked_at.isoformat(),
+        }
+        for r, c in rows
+    ]
+
+
 @router.post("/audits/sweep")
 def run_due_audits(
     limit: int = 20, session: Session = Depends(get_session)

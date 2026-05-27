@@ -93,6 +93,35 @@ export async function listCaseAudits(id: number): Promise<AuditRow[]> {
   return (await res.json()) as AuditRow[];
 }
 
+export interface AggregateAuditRow extends AuditRow {
+  case_id: number;
+  broker_id: string;
+  case_status: CaseStatus;
+}
+
+export async function listAllAudits(limit = 200): Promise<AggregateAuditRow[]> {
+  const base = await apiBase();
+  const res = await fetch(`${base}/audits?limit=${limit}`);
+  if (!res.ok) throw new Error(`GET /audits failed: ${res.status}`);
+  return (await res.json()) as AggregateAuditRow[];
+}
+
+export interface EvidencePackageRow {
+  case_id: number;
+  broker_id: string;
+  case_status: CaseStatus;
+  evidence_path: string | null;
+  on_disk: boolean;
+  last_audited_at: string | null;
+}
+
+export async function listEvidencePackages(): Promise<EvidencePackageRow[]> {
+  const base = await apiBase();
+  const res = await fetch(`${base}/evidence`);
+  if (!res.ok) throw new Error(`GET /evidence failed: ${res.status}`);
+  return (await res.json()) as EvidencePackageRow[];
+}
+
 export async function runAudit(id: number): Promise<{ results: AuditRow[] }> {
   const base = await apiBase();
   const res = await fetch(`${base}/cases/${id}/audit`, { method: 'POST' });

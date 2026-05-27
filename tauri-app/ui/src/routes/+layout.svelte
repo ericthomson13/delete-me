@@ -15,6 +15,8 @@
     <a href="/profiles" class:active={path.startsWith('/profiles')}>People</a>
     <a href="/brokers" class:active={path.startsWith('/brokers')}>Brokers</a>
     <a href="/discovery" class:active={path.startsWith('/discovery')}>Discovery</a>
+    <a href="/audits" class:active={path.startsWith('/audits')}>Audits</a>
+    <a href="/evidence" class:active={path.startsWith('/evidence')}>Evidence</a>
   </div>
 </nav>
 
