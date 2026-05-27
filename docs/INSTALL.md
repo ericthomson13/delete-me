@@ -95,6 +95,14 @@ Download a signed installer for your OS from the
 In Tauri builds, your PII never leaves the device. Only signed letters and
 optional outbound email (Postmark) ever touch the network.
 
+## Maintainer checklist
+
+If you're operating the project rather than building features, see
+[`MAINTAINER_CHECKLIST.md`](MAINTAINER_CHECKLIST.md) — a single page
+listing every credential, verification pass, design asset, and
+scheduled checkpoint you're responsible for. Skim it when planning a
+session.
+
 ## Environment variables
 
 All env vars are optional. Without them, the tool stays in safe defaults

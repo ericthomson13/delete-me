@@ -5,6 +5,12 @@ The trackable counterpart to [`architecture/PHASES.md`](architecture/PHASES.md).
 prose. This is the *trackable* doc — each open item is a GitHub issue you
 can close when it lands.
 
+> **Blocked on you, not on code?** See
+> [`MAINTAINER_CHECKLIST.md`](MAINTAINER_CHECKLIST.md) for the
+> consolidated list of verification work, optional service
+> credentials, developer tooling, design assets, and scheduled
+> checkpoints.
+
 ## Active phases
 
 ### Phase 4 — Tauri desktop
@@ -32,9 +38,10 @@ can close when it lands.
 
 ## Suggested order
 
-1. **Phase 6** ([#6](https://github.com/ericthomson13/delete-me/issues/6) then [#7](https://github.com/ericthomson13/delete-me/issues/7)) — date-driven, blocks live submissions.
-2. **Phase 5** ([#4](https://github.com/ericthomson13/delete-me/issues/4), [#5](https://github.com/ericthomson13/delete-me/issues/5) in parallel) — easy-PR path, no architectural risk.
-3. **Phase 4** ([#1](https://github.com/ericthomson13/delete-me/issues/1), [#2](https://github.com/ericthomson13/delete-me/issues/2), [#3](https://github.com/ericthomson13/delete-me/issues/3)) — largest scope, can land incrementally without blocking shipping.
+1. **Phase 5** ([#4](https://github.com/ericthomson13/delete-me/issues/4) draft promotions, [#5](https://github.com/ericthomson13/delete-me/issues/5) re-verification) — only verification work, doable in 15-30 min slices via [`VERIFYING_DRAFT_BROKERS.md`](VERIFYING_DRAFT_BROKERS.md).
+2. **Phase 4 [#2](https://github.com/ericthomson13/delete-me/issues/2)** (real icons) — when design bandwidth is available.
+3. **Phase 4 [#3](https://github.com/ericthomson13/delete-me/issues/3)** (encryption) — pick up when a threat model justifies the complexity; research is deposited.
+4. **Phase 6** ([#6](https://github.com/ericthomson13/delete-me/issues/6), [#7](https://github.com/ericthomson13/delete-me/issues/7)) — blocked on CalPrivacy; the 2026-08-01 trigger will surface it automatically.
 
 ## Shipped phases
 

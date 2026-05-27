@@ -72,6 +72,8 @@ open http://localhost:8080/docs
 Full walkthrough: [`USER_GUIDE.md`](USER_GUIDE.md).
 Install details: [`INSTALL.md`](INSTALL.md).
 Runbook (testing & operating): [`RUNBOOK.md`](RUNBOOK.md).
+Maintainer checklist (credentials, verification, assets, schedules):
+[`MAINTAINER_CHECKLIST.md`](MAINTAINER_CHECKLIST.md).
 
 ## Architecture
 
