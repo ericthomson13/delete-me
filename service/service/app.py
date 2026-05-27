@@ -7,7 +7,7 @@ import os
 
 from delete_me import __version__
 from delete_me.db.session import init_db
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api import (
@@ -22,6 +22,7 @@ from .api import (
     presence,
     profiles,
 )
+from .api._auth import check_api_key
 
 
 def create_app() -> FastAPI:
@@ -35,6 +36,7 @@ def create_app() -> FastAPI:
             "Open-source CCPA / state-DSAR / GDPR deletion-letter service. "
             "Phase 1: profiles, cases, dry-run send. See docs/architecture/PLAN.md."
         ),
+        dependencies=[Depends(check_api_key)],
     )
 
     # Tauri front-end + local dev only. Tighten in production.

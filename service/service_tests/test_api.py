@@ -303,6 +303,39 @@ def test_breach_check_with_mock_provider(client: TestClient, monkeypatch):
     assert rows[0]["breach_name"] == "Adobe"
 
 
+def test_api_key_unset_allows_all_requests(client: TestClient, monkeypatch):
+    """Default behavior: DELETE_ME_API_KEY unset, no auth enforced."""
+    monkeypatch.delenv("DELETE_ME_API_KEY", raising=False)
+    r = client.get("/brokers")
+    assert r.status_code == 200
+
+
+def test_api_key_set_rejects_missing_header(client: TestClient, monkeypatch):
+    monkeypatch.setenv("DELETE_ME_API_KEY", "secret-key-123")
+    r = client.get("/brokers")
+    assert r.status_code == 401
+    assert "X-API-Key" in r.json()["detail"]
+
+
+def test_api_key_set_accepts_correct_header(client: TestClient, monkeypatch):
+    monkeypatch.setenv("DELETE_ME_API_KEY", "secret-key-123")
+    r = client.get("/brokers", headers={"X-API-Key": "secret-key-123"})
+    assert r.status_code == 200
+
+
+def test_api_key_set_rejects_wrong_header(client: TestClient, monkeypatch):
+    monkeypatch.setenv("DELETE_ME_API_KEY", "secret-key-123")
+    r = client.get("/brokers", headers={"X-API-Key": "wrong"})
+    assert r.status_code == 401
+
+
+def test_api_key_exempts_health(client: TestClient, monkeypatch):
+    """Health endpoint stays unauthenticated so liveness probes work."""
+    monkeypatch.setenv("DELETE_ME_API_KEY", "secret-key-123")
+    r = client.get("/health")
+    assert r.status_code == 200
+
+
 def test_password_check(client: TestClient, monkeypatch):
     import hashlib
 
