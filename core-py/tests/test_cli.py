@@ -63,6 +63,74 @@ def test_presence_check_with_profile_runs_and_shows_footer(cli_env):
         assert "no-audit-source" in result.output
 
 
+def _seed_second_profile(runner: CliRunner) -> None:
+    """Add a second profile to the same DB so --all-profiles has multiple targets."""
+    from delete_me.cases import upsert_profile
+    from delete_me.db.session import get_session
+    from delete_me.letters.engine import ConsumerProfile
+
+    with get_session() as session:
+        upsert_profile(
+            session,
+            ConsumerProfile(
+                full_legal_name="Bob T. Tester",
+                current_address="456 Pine Rd, Salem, OR 97301",
+                email="bob@example.com",
+            ),
+        )
+
+
+def test_presence_check_profile_id_targets_specific(cli_env):
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        _seed_profile(runner)
+        _seed_second_profile(runner)
+        result = runner.invoke(
+            main, ["presence-check", "--profile-id", "1", "--broker", "spokeo", "--json"]
+        )
+        assert result.exit_code == 0, result.output
+        payload = json.loads(result.output)
+        assert list(payload["by_profile"].keys()) == ["1"]
+        assert payload["by_profile"]["1"]["profile_name"] == "Jane Q. Doe"
+
+
+def test_presence_check_unknown_profile_id_errors(cli_env):
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        _seed_profile(runner)
+        result = runner.invoke(
+            main, ["presence-check", "--profile-id", "999", "--broker", "spokeo"]
+        )
+        assert result.exit_code == 2
+        assert "profile 999 not found" in result.output
+
+
+def test_presence_check_all_profiles_iterates(cli_env):
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        _seed_profile(runner)
+        _seed_second_profile(runner)
+        result = runner.invoke(
+            main, ["presence-check", "--all-profiles", "--broker", "spokeo", "--json"]
+        )
+        assert result.exit_code == 0, result.output
+        payload = json.loads(result.output)
+        assert set(payload["by_profile"].keys()) == {"1", "2"}
+        names = {entry["profile_name"] for entry in payload["by_profile"].values()}
+        assert names == {"Jane Q. Doe", "Bob T. Tester"}
+
+
+def test_presence_check_all_profiles_and_profile_id_conflict(cli_env):
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        _seed_profile(runner)
+        result = runner.invoke(
+            main, ["presence-check", "--all-profiles", "--profile-id", "1"]
+        )
+        assert result.exit_code == 2
+        assert "mutually exclusive" in result.output
+
+
 def test_breach_check_with_no_providers_lists_all_setup_hints(cli_env):
     runner = CliRunner()
     with runner.isolated_filesystem():

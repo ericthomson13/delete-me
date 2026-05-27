@@ -106,6 +106,8 @@ Most brokers in the registry don't expose a consumer-facing search UI, so the fo
 
 Results are cached per `(profile, broker, source)` for 7 days by default (`--fresh-days N` to override). Pass `--broker spokeo` to check just one, or `--json` for machine-readable output.
 
+For multi-profile setups (docker self-host with several users): `--all-profiles` runs the check against every profile in the DB; `--profile-id N` targets a specific one. They're mutually exclusive; default is the first profile by id (current behavior).
+
 **Breach-check** — has your email appeared in known breaches? Supports three independently optional providers; configure as many or as few as you want.
 
 **Which providers should I configure?** Each has a different corpus and a different price. Pick based on what you want coverage for:

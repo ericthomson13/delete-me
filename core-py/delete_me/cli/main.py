@@ -465,15 +465,36 @@ def audit_cmd(case_id: int) -> None:
     show_default=True,
     help="Reuse a stored PresenceResult if it's newer than this many days.",
 )
+@click.option(
+    "--profile-id",
+    type=int,
+    default=None,
+    help="Target a specific profile by id. Default: the first profile in the DB.",
+)
+@click.option(
+    "--all-profiles",
+    is_flag=True,
+    default=False,
+    help="Run the check against every profile in the DB. Mutually exclusive with --profile-id.",
+)
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON instead of a table.")
-def presence_check_cmd(broker_id: str | None, fresh_days: int, as_json: bool) -> None:
+def presence_check_cmd(
+    broker_id: str | None,
+    fresh_days: int,
+    profile_id: int | None,
+    all_profiles: bool,
+    as_json: bool,
+) -> None:
     """Check which brokers actually list this consumer (pre-send discovery).
 
-    Requires a profile in the DB (run `case-create` once or `init` + `case-create`).
-    Only hits brokers whose YAML lists at least one audit_source adapter — most
-    broker YAMLs have no consumer-facing search and will show in the coverage
-    footer instead.
+    Requires at least one profile in the DB. Only hits brokers whose YAML
+    lists at least one audit_source adapter — most broker YAMLs have no
+    consumer-facing search and will show in the coverage footer instead.
     """
+    if all_profiles and profile_id is not None:
+        click.echo("error: --all-profiles and --profile-id are mutually exclusive", err=True)
+        sys.exit(2)
+
     init_db()
     all_brokers = load_brokers()
     if broker_id is not None:
@@ -486,56 +507,97 @@ def presence_check_cmd(broker_id: str | None, fresh_days: int, as_json: bool) ->
 
     orch = PresenceOrchestrator.from_registry(production_registry())
     with get_session() as session:
-        profile = session.exec(select(Profile)).first()
-        if profile is None:
+        profiles_to_check: list[Profile] = []
+        if all_profiles:
+            profiles_to_check = list(session.exec(select(Profile).order_by(Profile.id)))
+        elif profile_id is not None:
+            target = session.get(Profile, profile_id)
+            if target is None:
+                click.echo(f"error: profile {profile_id} not found", err=True)
+                sys.exit(2)
+            profiles_to_check = [target]
+        else:
+            first = session.exec(select(Profile).order_by(Profile.id)).first()
+            if first is not None:
+                profiles_to_check = [first]
+
+        if not profiles_to_check:
             click.echo(
                 "error: no profile in DB. Run `delete-me init` then `delete-me case-create` "
                 "(or any command that persists a profile) first.",
                 err=True,
             )
             sys.exit(2)
-        results = orch.check_profile(session, profile, brokers=selected, fresh_days=fresh_days)
 
-    no_source_count = sum(1 for r in results if r.source == "(none)")
-    found_count = sum(1 for r in results if r.found)
-    notfound_count = sum(1 for r in results if not r.found and not r.inconclusive and r.source != "(none)")
-    incon_count = sum(1 for r in results if r.inconclusive and r.source != "(none)")
+        # Materialize results to plain dicts inside the session so iterating
+        # additional profiles doesn't detach earlier rows on commit.
+        by_profile: dict[int, dict] = {}
+        for profile in profiles_to_check:
+            results = orch.check_profile(
+                session, profile, brokers=selected, fresh_days=fresh_days
+            )
+            by_profile[profile.id] = {
+                "profile_name": profile.full_legal_name,
+                "rows": [_presence_row(r) for r in results],
+            }
+
+    def _summary(rows: list[dict]) -> dict:
+        return {
+            "found": sum(1 for r in rows if r["status"] == "FOUND"),
+            "not_found": sum(
+                1 for r in rows if r["status"] == "not found" and r["source"] != "(none)"
+            ),
+            "inconclusive": sum(
+                1 for r in rows if r["status"] == "inconclusive" and r["source"] != "(none)"
+            ),
+            "no_audit_source_configured": sum(1 for r in rows if r["source"] == "(none)"),
+        }
 
     if as_json:
-        click.echo(json.dumps({
-            "results": [_presence_row(r) for r in results],
-            "summary": {
-                "found": found_count,
-                "not_found": notfound_count,
-                "inconclusive": incon_count,
-                "no_audit_source_configured": no_source_count,
-            },
-        }, indent=2))
+        payload = {
+            "by_profile": {
+                str(pid): {
+                    "profile_name": entry["profile_name"],
+                    "results": entry["rows"],
+                    "summary": _summary(entry["rows"]),
+                }
+                for pid, entry in by_profile.items()
+            }
+        }
+        click.echo(json.dumps(payload, indent=2))
         return
 
-    if not results:
-        click.echo("(no brokers to check)")
-        return
-    for r in results:
-        if r.source == "(none)":
+    multi = len(by_profile) > 1
+    for pid, entry in by_profile.items():
+        rows = entry["rows"]
+        if multi:
+            click.echo(f"\n=== profile #{pid}: {entry['profile_name']} ===")
+        if not rows:
+            click.echo("(no brokers to check)")
             continue
-        if r.found:
-            marker = "FOUND"
-        elif r.inconclusive:
-            marker = "incn "
-        else:
-            marker = "miss "
-        url = r.listings_url or ""
-        click.echo(f"{marker}  {r.broker_id:24}  {r.source:30}  {url}")
-    click.echo(
-        f"\nfound={found_count}  not-found={notfound_count}  inconclusive={incon_count}  "
-        f"no-audit-source={no_source_count} (of {len(selected)} brokers checked)"
-    )
-    if no_source_count:
+        for r in rows:
+            if r["source"] == "(none)":
+                continue
+            if r["status"] == "FOUND":
+                marker = "FOUND"
+            elif r["status"] == "inconclusive":
+                marker = "incn "
+            else:
+                marker = "miss "
+            url = r["listings_url"] or ""
+            click.echo(f"{marker}  {r['broker_id']:24}  {r['source']:30}  {url}")
+        s = _summary(rows)
         click.echo(
-            "Note: brokers without audit_sources can't be presence-checked. "
-            "Coverage grows as adapters are added."
+            f"\nfound={s['found']}  not-found={s['not_found']}  "
+            f"inconclusive={s['inconclusive']}  "
+            f"no-audit-source={s['no_audit_source_configured']} "
+            f"(of {len(selected)} brokers checked)"
         )
+        if s["no_audit_source_configured"]:
+            click.echo(
+                "Note: brokers without audit_sources can't be presence-checked. "
+                "Coverage grows as adapters are added."
+            )
 
 
 @main.command("breach-check")
