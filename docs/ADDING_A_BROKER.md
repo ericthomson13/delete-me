@@ -37,6 +37,7 @@ optional_pii:
   - email
 re_aggregation_days: 45            # observed days between removal and re-listing
 audit_sources: []                  # source_ids of registered adapters; see "When to add an audit adapter" below
+# audit_sources_last_pass: {}      # bot-managed by audit-adapter-health workflow; do not hand-edit
 statutes:
   - ccpa_1798_105
   - ca_delete_act

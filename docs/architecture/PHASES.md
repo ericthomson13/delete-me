@@ -259,8 +259,11 @@ Adapter coverage (shipped in a follow-up tranche):
 - 34 enterprise-aggregator brokers correctly have `audit_sources: []` and
   don't need adapters (no public consumer-facing search).
 - Weekly `audit-adapter-health` GitHub Action probes every adapter
-  against a synthetic profile and files `audit-adapter-broken` issues
-  on regression.
+  against a synthetic profile, files `audit-adapter-broken` issues on
+  regression, and bot-commits `audit_sources_last_pass.<source_id>`
+  date bumps on each broker YAML for adapters that passed. Mirrors the
+  automation-health pattern. Cross-check rejects orphan keys
+  (`audit_sources_last_pass` keys that aren't in `audit_sources`).
 
 What's missing:
 

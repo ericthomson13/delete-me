@@ -82,6 +82,7 @@ class Broker(BaseModel):
     optional_pii: list[PIIField] = Field(default_factory=list)
     re_aggregation_days: int | None = None
     audit_sources: list[str] = Field(default_factory=list)
+    audit_sources_last_pass: dict[str, date] | None = None
     statutes: list[str]
     letter_template: str | None = None
     user_submit_only: bool = False
@@ -178,4 +179,12 @@ def cross_check(brokers: list[Broker], statutes: dict[str, Statute]) -> list[str
         for src in b.audit_sources:
             if not src.replace("_", "").isalnum():
                 errors.append(f"{b.id}: audit_source {src!r} has invalid characters")
+        if b.audit_sources_last_pass:
+            declared = set(b.audit_sources)
+            for src in b.audit_sources_last_pass:
+                if src not in declared:
+                    errors.append(
+                        f"{b.id}: audit_sources_last_pass key {src!r} "
+                        f"is not in audit_sources"
+                    )
     return errors

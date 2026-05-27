@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # for the date-bump bot commit
   issues: write
   pull-requests: read
 
@@ -28,6 +28,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          token: ${{ github.token }}
+          persist-credentials: true
 
       - uses: actions/setup-python@v6
         with:
@@ -57,9 +60,23 @@ jobs:
           path: /tmp/audit-health.json
           if-no-files-found: ignore
 
-      - name: Open issues for regressions
+      - name: Open issues + bump dates
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           uv run python .github/scripts/audit_adapter_health_followup.py /tmp/audit-health.json
+
+      - name: Commit date bumps
+        run: |
+          if git diff --quiet -- registry/brokers/; then
+            echo "no date bumps to commit"
+            exit 0
+          fi
+          count=$(git diff --name-only -- registry/brokers/ | wc -l | tr -d ' ')
+          today=$(date -u +%Y-%m-%d)
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add registry/brokers/
+          git commit -m "chore(audit): bump audit_sources_last_pass for $count adapter(s) ($today)"
+          git push

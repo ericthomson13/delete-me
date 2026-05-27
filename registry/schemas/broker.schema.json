@@ -111,6 +111,11 @@
       "uniqueItems": true,
       "description": "Identifiers of audit adapters (in core-py/delete_me/audit/sources/) used to verify removal."
     },
+    "audit_sources_last_pass": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "format": "date" },
+      "description": "Per-source ISO date the audit-adapter-health CI workflow last confirmed the adapter returned a real response (healthy = inconclusive=false AND found=false). Keys must be present in audit_sources. Bot-committed; do not hand-edit."
+    },
     "statutes": {
       "type": "array",
       "minItems": 1,

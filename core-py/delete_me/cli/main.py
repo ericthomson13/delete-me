@@ -765,6 +765,14 @@ def audit_adapter_health_cmd(as_json: bool) -> None:
         dob_year=None,
     )
 
+    # Build source_id -> broker_id map from the registry. A source declared by
+    # multiple brokers appears against the first one we see (alphabetical);
+    # multi-broker sources don't exist today.
+    source_to_broker: dict[str, str] = {}
+    for broker in load_brokers():
+        for src in broker.audit_sources:
+            source_to_broker.setdefault(src, broker.id)
+
     rows: list[dict] = []
     for source_id, adapter in production_registry().items():
         try:
@@ -772,6 +780,7 @@ def audit_adapter_health_cmd(as_json: bool) -> None:
         except Exception as exc:  # noqa: BLE001 — never let an adapter crash the sweep
             rows.append({
                 "source_id": source_id,
+                "broker_id": source_to_broker.get(source_id),
                 "status": "error",
                 "notes": f"adapter raised: {exc}",
                 "listings_url": None,
@@ -789,6 +798,7 @@ def audit_adapter_health_cmd(as_json: bool) -> None:
 
         rows.append({
             "source_id": source_id,
+            "broker_id": source_to_broker.get(source_id),
             "status": status,
             "notes": result.notes,
             "listings_url": result.listings_url,

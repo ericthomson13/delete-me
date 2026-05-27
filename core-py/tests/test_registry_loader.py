@@ -88,3 +88,55 @@ def test_brokers_yaml_is_parseable(tmp_path: Path):
     for path in brokers_dir().glob("*.yaml"):
         with path.open() as f:
             yaml.safe_load(f)
+
+
+def test_audit_sources_last_pass_validates_when_keys_match(tmp_path: Path):
+    """audit_sources_last_pass keys must each appear in audit_sources."""
+    good = tmp_path / "spokeo.yaml"
+    good.write_text(
+        textwrap.dedent(
+            """
+            id: spokeo
+            name: Test
+            opt_out: { methods: [email], email: a@b.com }
+            accepts_authorized_agent: true
+            required_pii: [full_name]
+            audit_sources: [spokeo_search]
+            audit_sources_last_pass:
+              spokeo_search: 2026-05-27
+            statutes: [ccpa_1798_105]
+            last_verified: 2026-05-18
+            maintainer: "@ericthomson13"
+            """
+        ).strip()
+    )
+    broker = validate_broker_file(good)
+    statutes = load_statutes()
+    errors = cross_check([broker], statutes)
+    assert errors == []
+
+
+def test_cross_check_rejects_orphan_last_pass_key(tmp_path: Path):
+    """An audit_sources_last_pass key that isn't in audit_sources is a config bug."""
+    bad = tmp_path / "spokeo.yaml"
+    bad.write_text(
+        textwrap.dedent(
+            """
+            id: spokeo
+            name: Test
+            opt_out: { methods: [email], email: a@b.com }
+            accepts_authorized_agent: true
+            required_pii: [full_name]
+            audit_sources: [spokeo_search]
+            audit_sources_last_pass:
+              spokeo_search: 2026-05-27
+              ghost_source: 2026-05-27
+            statutes: [ccpa_1798_105]
+            last_verified: 2026-05-18
+            maintainer: "@ericthomson13"
+            """
+        ).strip()
+    )
+    broker = validate_broker_file(bad)
+    errors = cross_check([broker], load_statutes())
+    assert any("ghost_source" in e for e in errors)

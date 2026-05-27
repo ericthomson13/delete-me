@@ -198,6 +198,9 @@ def test_audit_adapter_health_reports_each_adapter(cli_env, monkeypatch):
             "fp_src": "false_positive",
             "boom_src": "error",
         }
+        # Every row must carry broker_id (may be None for unregistered sources)
+        # so the followup script can bump the right YAML.
+        assert all("broker_id" in r for r in payload["rows"])
 
 
 def test_password_check_stdin_not_found(cli_env, monkeypatch):
