@@ -210,6 +210,91 @@ The disclaimer/regulation schema work (`regulated_by`, `removal_scope`,
 separate follow-up to this work — it changes per-broker UX presentation,
 not the submission path itself.
 
+## Phase 9 status
+
+Pre-send presence-check landed. Reuses the existing `AuditAdapter` contract
+verbatim — the only new code is an orchestrator, a `PresenceResult` table
+keyed on (profile_id, broker_id, source), and the CLI wiring.
+
+What's in:
+
+- `core-py/delete_me/audit/presence.py` — `PresenceOrchestrator.check_profile`
+  iterates a profile against every broker (or a subset), caches results for
+  `fresh_days` (default 7), and degrades to inconclusive on adapter errors
+  or missing adapters — never raises.
+- `core-py/delete_me/db/models.py` — `PresenceResult` table. New tables are
+  picked up automatically by `init_db()`; no migration needed.
+- CLI: `delete-me presence-check [--broker ID] [--fresh-days N] [--json]`
+  prints a marker-per-row table plus a coverage footer that names how many
+  brokers had no audit source configured.
+- CLI: `delete-me send --case N --check-first [--force]` runs the
+  presence-check for the case's broker first and skips the send if every
+  real source returned not-found.
+- Tests: `core-py/tests/test_presence.py` covers found / not-found /
+  no-source / no-adapter / adapter-raises / cache-hit / cache-expired
+  using the existing `MockAuditAdapter`.
+
+What's missing (explicit scope cutoffs):
+
+- **Adapter coverage.** Today only `truepeoplesearch_search` is wired in
+  `production_registry()`. Most broker YAMLs still have `audit_sources: []`
+  and will surface in the footer as uncheckable. Adding adapters is the
+  next leverage point and is tracked separately from this phase.
+- **Service / Tauri surface.** CLI-only for MVP. The FastAPI service and
+  the desktop app can mirror in a follow-up; the orchestrator + table are
+  reusable as-is.
+
+## Phase 10 status
+
+Breach-exposure lookup across three independently-optional providers
+(HIBP, IntelX, DeHashed), plus a free k-anonymity password check.
+Each provider degrades gracefully: missing credentials at startup → a
+setup-hint row; auth/quota failure mid-run → provider disabled for the
+run, others keep going.
+
+What's in:
+
+- `core-py/delete_me/breaches/` — `base.py` (`BreachAdapter` ABC +
+  `BreachAdapterUnavailable`), one adapter module per provider:
+  - `hibp.py` — v3 `breachedaccount`, 1.5s in-process throttle,
+    401/404/429 handled distinctly. Setup: `HIBP_API_KEY` (paid).
+  - `intelx.py` — async phonebook search (POST + poll), collapses
+    records to one row per unique bucket. Setup: `INTELX_API_KEY` (free
+    tier exists; rate-limited). `INTELX_BASE_URL` overridable.
+  - `dehashed.py` — basic-auth search, collapses entries to one row per
+    `database_name` with the populated columns mapped to data-class
+    labels (no credentials persisted). Setup: `DEHASHED_USERNAME` +
+    `DEHASHED_API_KEY` (paid).
+  - `passwords.py` — `PwnedPasswordsClient.lookup(password)` does SHA-1
+    locally and sends only the 5-char hex prefix. No key, no persistence.
+  - `orchestrator.py` — `discover_registry()` returns the live adapters
+    plus a `ProviderStatus` row per provider (with setup hint when
+    unavailable). `BreachOrchestrator.check_email` upserts
+    `BreachExposure` rows; mid-run `BreachAdapterUnavailable` removes
+    the offending provider from the active set and records it in
+    `runtime_disabled` instead of aborting.
+- `core-py/delete_me/db/models.py` — `BreachExposure` table.
+- CLI:
+  - `delete-me breach-check [--email ADDR]... [--json]` — runs every
+    available provider, prints a per-row `[source]` tag plus an
+    "Active providers" / "Skipped at startup" / "Disabled mid-run"
+    footer so the user knows exactly which providers ran and which
+    didn't (and why).
+  - `delete-me password-check [--stdin]` — k-anonymity Pwned Passwords
+    check. Hidden prompt by default; `--stdin` for piped input.
+- Tests: `core-py/tests/test_breaches.py` covers each adapter (missing
+  creds / 200 / 404 / 401 / 429-retry / rerun-dedup / IntelX bucket
+  collapse / DeHashed credit-exhaustion / Pwned Passwords prefix-only
+  contract) plus the multi-provider discovery and mid-run-disable logic.
+
+What's missing:
+
+- **Service / Tauri surface.** CLI-only for now; the orchestrator and
+  adapters are pure-Python and reusable as-is.
+- **Tor-style anonymization for IntelX / DeHashed lookups.** HIBP gets
+  the k-anonymity treatment via the password endpoint, but the email
+  endpoints on all three send the actual email. Out of scope for MVP.
+
 ## Phase 0 acceptance gate
 
 Phase 0 is complete and shippable when all six verification steps in

@@ -36,7 +36,7 @@ required_pii:
 optional_pii:
   - email
 re_aggregation_days: 45            # observed days between removal and re-listing
-audit_sources: []                  # leave empty unless you also ship an adapter
+audit_sources: []                  # source_ids of registered adapters; see "When to add an audit adapter" below
 statutes:
   - ccpa_1798_105
   - ca_delete_act
@@ -87,7 +87,25 @@ only they receive. Examples in the existing registry: `fastpeoplesearch`,
 
 ## When to add an audit adapter
 
-Only after Phase 2 lands. Until then, leave `audit_sources: []`.
+If the broker has a consumer-facing public search (e.g.,
+`https://broker.com/search?name=...`), an audit adapter is worth writing.
+It powers two features at once:
+
+- **Post-send audit** (`delete-me audit-due`) — confirms the broker
+  actually removed the consumer after a deletion letter.
+- **Pre-send presence-check** (`delete-me presence-check`,
+  `send --check-first`) — tells the user whether the broker has them at
+  all before they bother sending a letter.
+
+Both reuse the same `AuditAdapter` interface in
+`core-py/delete_me/audit/sources/base.py`; the reference real-world adapter
+is `truepeoplesearch.py` next to it. Once the adapter is registered in
+`production_registry()` (`core-py/delete_me/audit/orchestrator.py`), add
+its `source_id` to the broker's `audit_sources` list.
+
+Brokers without a public search UI (most enterprise aggregators) should
+keep `audit_sources: []`. The tool will show those in the presence-check
+coverage footer as "no audit source configured".
 
 ## When to update an existing broker
 

@@ -85,3 +85,31 @@ class AuditResult(SQLModel, table=True):
     evidence_html_path: str | None = None
     screenshot_path: str | None = None
     notes: str | None = None
+
+
+class PresenceResult(SQLModel, table=True):
+    __tablename__ = "presence_results"
+
+    id: int | None = Field(default=None, primary_key=True)
+    profile_id: int = Field(foreign_key="profiles.id", index=True)
+    broker_id: str = Field(index=True)
+    source: str = Field(index=True)
+    checked_at: datetime = Field(default_factory=_now, index=True)
+    found: bool
+    inconclusive: bool = False
+    listings_url: str | None = None
+    notes: str | None = None
+
+
+class BreachExposure(SQLModel, table=True):
+    __tablename__ = "breach_exposures"
+
+    id: int | None = Field(default=None, primary_key=True)
+    profile_id: int = Field(foreign_key="profiles.id", index=True)
+    email: str = Field(index=True)
+    source: str = Field(index=True)
+    breach_name: str = Field(index=True)
+    breach_date: str | None = None
+    data_classes_json: str = "[]"
+    description_excerpt: str | None = None
+    checked_at: datetime = Field(default_factory=_now, index=True)

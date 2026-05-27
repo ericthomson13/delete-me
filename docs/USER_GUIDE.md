@@ -88,12 +88,79 @@ uv run delete-me cases
 # #1    spokeo                    status=draft               sent=—
 ```
 
+### 6b. Discovery — find out where you're exposed (optional)
+
+Two read-only checks. Both are optional but useful before you start firing letters.
+
+**Presence-check** — which brokers actually have a profile that matches you:
+
+```sh
+uv run delete-me presence-check
+# FOUND  truepeoplesearch        truepeoplesearch_search   https://…
+# miss   spokeo                  spokeo_search             
+# …
+# found=1  not-found=1  inconclusive=0  no-audit-source=28 (of 30 brokers checked)
+```
+
+Most brokers in the registry don't expose a consumer-facing search UI, so the footer's `no-audit-source` count will usually be large — that's a coverage gap, not a bug. The brokers with adapters get real checks; the rest are still worth sending letters to speculatively.
+
+Results are cached per `(profile, broker, source)` for 7 days by default (`--fresh-days N` to override). Pass `--broker spokeo` to check just one, or `--json` for machine-readable output.
+
+**Breach-check** — has your email appeared in known breaches? Supports three independently optional providers; configure as many or as few as you want.
+
+**Which providers should I configure?** Each has a different corpus and a different price. Pick based on what you want coverage for:
+
+| Provider | What you get | What you miss without it | Env vars | Setup |
+|---|---|---|---|---|
+| HaveIBeenPwned (HIBP) | The canonical breach index — corporate breaches (Adobe, LinkedIn, etc.) with named breach + date + data classes. The most useful single provider. | No breach coverage at all from the established corporate breaches. | `HIBP_API_KEY` | Paid, ~$3.50/mo at [haveibeenpwned.com/api/key](https://haveibeenpwned.com/api/key) |
+| IntelX | Broader leak corpus — forum dumps, paste sites, Telegram leaks. Catches exposures HIBP doesn't index. | The long tail of underground/leaked-doc exposure beyond named corporate breaches. | `INTELX_API_KEY` (optional `INTELX_BASE_URL`) | Free tier at [intelx.io/account](https://intelx.io/account); paid tier removes rate limits |
+| DeHashed | Surfaces *which fields* leaked per breach (email, password plaintext, phone, address, etc.) and indexes more obscure dumps. | Per-field exposure detail — you'd see "you're in breach X" without knowing whether your password/phone/address leaked. | `DEHASHED_USERNAME` + `DEHASHED_API_KEY` | Paid at [dehashed.com/pricing](https://dehashed.com/pricing); credentials on [dehashed.com/profile](https://dehashed.com/profile) |
+
+If you configure none, `breach-check` exits with the setup hints for all three (so you don't have to come back to these docs to find out how). Configure them in any combination — the tool runs every one that has credentials and skips the rest silently in the footer.
+
+```sh
+export HIBP_API_KEY=...
+uv run delete-me breach-check
+# jane@example.com
+#   2013-10-04   [hibp]    Adobe
+#   2012-05-05   [hibp]    LinkedIn
+# Total exposures: 2 across 1 address(es).
+# Active providers: hibp
+#
+# Skipped at startup (not configured):
+#   [intelx]   INTELX_API_KEY not set. Get a key at https://intelx.io/account and …
+#   [dehashed] DeHashed needs DEHASHED_USERNAME and DEHASHED_API_KEY. …
+```
+
+If you have none configured, `breach-check` exits with the setup instructions for every supported provider so you know all your options. If one provider's auth fails mid-run (revoked key, out of quota), it's disabled for that run and noted in the footer — the others still report.
+
+Pass `--email addr@…` (repeatable) to check addresses beyond the one in your profile. `--json` for machine-readable output.
+
+**Password-check** — has a specific password ever appeared in a breach? Uses HIBP's free k-anonymity Pwned Passwords endpoint. No key required, no subscription:
+
+```sh
+uv run delete-me password-check
+# Password: ****************
+# FOUND — this password has been seen 35,401 time(s) in known breaches
+```
+
+The password never leaves your machine in a recoverable form: we SHA-1 it locally and send only the first 5 hex characters of the hash. Nothing is written to the database. Use `--stdin` to pipe a password in non-interactively (the source has to be history-safe — that's on you).
+
 ### 7. Dry-run send
 
 ```sh
 uv run delete-me send --case 1
 # … status=sent_dry_run, audit_due_at = today + 60 days
 ```
+
+Add `--check-first` to skip the send if presence-check confirms the broker doesn't list you (use `--force` to send anyway):
+
+```sh
+uv run delete-me send --case 1 --check-first
+# {"skipped": true, "reason": "presence-check returned not-found …"}
+```
+
+Only brokers with a configured audit source can be checked this way; everything else falls through to a normal send.
 
 ### 8. Live send (when ready)
 

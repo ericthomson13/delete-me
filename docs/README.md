@@ -29,6 +29,8 @@ That approach is a graveyard — see
 | 3 — Evidence Package (zip with letter, audit findings, CA AG draft) | **shipped** | `delete-me evidence --case N` |
 | 4 — Tauri Desktop | roadmap | |
 | 5+ — Eastern States, DROP, GDPR | roadmap | |
+| 9 — Presence-check (pre-send discovery) | **shipped** | `delete-me presence-check`, `send --check-first` |
+| 10 — Breach-check (HIBP + IntelX + DeHashed + k-anon passwords) | **shipped** | `delete-me breach-check`, `delete-me password-check` |
 
 **MVP is shipped as of this commit.** A user can: capture a profile,
 generate signed letters, dry-run or live-send them, audit ~60 days later,

@@ -20,9 +20,10 @@ from pathlib import Path
 import click
 import jsonschema
 from pydantic import ValidationError
+from sqlmodel import select
 
 from delete_me.agent_form import generate_designation
-from delete_me.audit import AuditOrchestrator
+from delete_me.audit import AuditOrchestrator, PresenceOrchestrator, latest_for_broker
 from delete_me.audit.orchestrator import production_registry
 from delete_me.cases import (
     case_as_dict,
@@ -32,7 +33,7 @@ from delete_me.cases import (
     submit_via_drop,
     upsert_profile,
 )
-from delete_me.db import Case
+from delete_me.db import Case, Profile
 from delete_me.db.session import default_db_url, get_session, init_db
 from delete_me.evidence import PackageBuilder
 from delete_me.letters import LetterEngine
@@ -286,7 +287,22 @@ def cases_list() -> None:
     default=False,
     help="Live send requires POSTMARK_SERVER_TOKEN. Dry-run by default.",
 )
-def send_cmd(case_id: int, live: bool) -> None:
+@click.option(
+    "--check-first/--no-check-first",
+    default=False,
+    help=(
+        "Run presence-check against the broker before sending. Skips the "
+        "send if every configured audit source reports found=False. "
+        "Inconclusive sources are treated as 'send anyway'."
+    ),
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="With --check-first, send even if presence reports not-found.",
+)
+def send_cmd(case_id: int, live: bool, check_first: bool, force: bool) -> None:
     """Send (or dry-run-send) a case's letter via Postmark."""
     init_db()
     transport = PostmarkTransport()
@@ -295,6 +311,24 @@ def send_cmd(case_id: int, live: bool) -> None:
         if not case:
             click.echo(f"error: case {case_id} not found", err=True)
             sys.exit(2)
+
+        if check_first:
+            broker_brokers = [b for b in load_brokers() if b.id == case.broker_id]
+            profile = session.get(Profile, case.profile_id)
+            if not profile:
+                click.echo(f"error: case {case_id} has no profile", err=True)
+                sys.exit(2)
+            orch = PresenceOrchestrator.from_registry(production_registry())
+            presence = orch.check_profile(session, profile, brokers=broker_brokers)
+            if not _should_send(presence, force=force):
+                click.echo(json.dumps({
+                    "skipped": True,
+                    "case_id": case_id,
+                    "reason": "presence-check returned not-found for every configured source; pass --force to send anyway",
+                    "presence": [_presence_row(r) for r in presence],
+                }, indent=2))
+                return
+
         try:
             result = send_case(session, case, transport, live=live)
         except ValueError as exc:
@@ -302,6 +336,41 @@ def send_cmd(case_id: int, live: bool) -> None:
             sys.exit(2)
 
         click.echo(json.dumps({"case": case_as_dict(case), "dry_run": result.dry_run}, indent=2))
+
+
+def _should_send(presence, *, force: bool) -> bool:
+    """Skip only if every real source returned found=False with no inconclusives.
+
+    "(none)" sentinel rows (broker has no audit_sources) are ignored — we
+    can't draw a conclusion from them either way, so they fall back to send.
+    """
+    if force:
+        return True
+    real = [r for r in presence if r.source != "(none)"]
+    if not real:
+        return True  # nothing to check against; default to send
+    if any(r.found for r in real):
+        return True
+    if any(r.inconclusive for r in real):
+        return True
+    return False  # every real source said not-found
+
+
+def _presence_row(r) -> dict:
+    if r.found:
+        status = "FOUND"
+    elif r.inconclusive:
+        status = "inconclusive"
+    else:
+        status = "not found"
+    return {
+        "broker_id": r.broker_id,
+        "source": r.source,
+        "status": status,
+        "listings_url": r.listings_url,
+        "notes": r.notes,
+        "checked_at": r.checked_at.isoformat() if r.checked_at else None,
+    }
 
 
 @main.command("drop-submit")
@@ -380,6 +449,244 @@ def audit_cmd(case_id: int) -> None:
             indent=2,
         )
     )
+
+
+@main.command("presence-check")
+@click.option(
+    "--broker",
+    "broker_id",
+    default=None,
+    help="Check just this broker. Default: every broker with audit_sources.",
+)
+@click.option(
+    "--fresh-days",
+    type=int,
+    default=7,
+    show_default=True,
+    help="Reuse a stored PresenceResult if it's newer than this many days.",
+)
+@click.option("--json", "as_json", is_flag=True, help="Emit JSON instead of a table.")
+def presence_check_cmd(broker_id: str | None, fresh_days: int, as_json: bool) -> None:
+    """Check which brokers actually list this consumer (pre-send discovery).
+
+    Requires a profile in the DB (run `case-create` once or `init` + `case-create`).
+    Only hits brokers whose YAML lists at least one audit_source adapter — most
+    broker YAMLs have no consumer-facing search and will show in the coverage
+    footer instead.
+    """
+    init_db()
+    all_brokers = load_brokers()
+    if broker_id is not None:
+        selected = [b for b in all_brokers if b.id == broker_id]
+        if not selected:
+            click.echo(f"error: unknown broker {broker_id!r}", err=True)
+            sys.exit(2)
+    else:
+        selected = all_brokers
+
+    orch = PresenceOrchestrator.from_registry(production_registry())
+    with get_session() as session:
+        profile = session.exec(select(Profile)).first()
+        if profile is None:
+            click.echo(
+                "error: no profile in DB. Run `delete-me init` then `delete-me case-create` "
+                "(or any command that persists a profile) first.",
+                err=True,
+            )
+            sys.exit(2)
+        results = orch.check_profile(session, profile, brokers=selected, fresh_days=fresh_days)
+
+    no_source_count = sum(1 for r in results if r.source == "(none)")
+    found_count = sum(1 for r in results if r.found)
+    notfound_count = sum(1 for r in results if not r.found and not r.inconclusive and r.source != "(none)")
+    incon_count = sum(1 for r in results if r.inconclusive and r.source != "(none)")
+
+    if as_json:
+        click.echo(json.dumps({
+            "results": [_presence_row(r) for r in results],
+            "summary": {
+                "found": found_count,
+                "not_found": notfound_count,
+                "inconclusive": incon_count,
+                "no_audit_source_configured": no_source_count,
+            },
+        }, indent=2))
+        return
+
+    if not results:
+        click.echo("(no brokers to check)")
+        return
+    for r in results:
+        if r.source == "(none)":
+            continue
+        if r.found:
+            marker = "FOUND"
+        elif r.inconclusive:
+            marker = "incn "
+        else:
+            marker = "miss "
+        url = r.listings_url or ""
+        click.echo(f"{marker}  {r.broker_id:24}  {r.source:30}  {url}")
+    click.echo(
+        f"\nfound={found_count}  not-found={notfound_count}  inconclusive={incon_count}  "
+        f"no-audit-source={no_source_count} (of {len(selected)} brokers checked)"
+    )
+    if no_source_count:
+        click.echo(
+            "Note: brokers without audit_sources can't be presence-checked. "
+            "Coverage grows as adapters are added."
+        )
+
+
+@main.command("breach-check")
+@click.option(
+    "--email",
+    "emails",
+    multiple=True,
+    help="Email to check (repeat). Default: profile.email.",
+)
+@click.option("--json", "as_json", is_flag=True, help="Emit JSON instead of a table.")
+def breach_check_cmd(emails: tuple[str, ...], as_json: bool) -> None:
+    """Check whether an email address appears in known breaches.
+
+    Supports multiple providers (HIBP, IntelX, DeHashed). Each is independently
+    optional — set the relevant env vars to enable each one. If none are
+    configured the command exits with setup hints for every supported provider.
+    """
+    from delete_me.breaches import BreachOrchestrator, discover_registry
+
+    init_db()
+    adapters, statuses = discover_registry()
+
+    if not adapters:
+        click.echo("breach-check: no providers configured. Set up at least one:\n", err=True)
+        for s in statuses:
+            click.echo(f"  [{s.source_id}] {s.detail}", err=True)
+        sys.exit(2)
+
+    orch = BreachOrchestrator.from_registry(adapters)
+    with get_session() as session:
+        profile = session.exec(select(Profile)).first()
+        if profile is None:
+            click.echo(
+                "error: no profile in DB. Run `delete-me init` then `delete-me case-create` first.",
+                err=True,
+            )
+            sys.exit(2)
+
+        targets = list(emails) if emails else ([profile.email] if profile.email else [])
+        if not targets:
+            click.echo(
+                "error: no email to check. Pass --email or set one via `delete-me init --email ...`.",
+                err=True,
+            )
+            sys.exit(2)
+
+        all_results: dict[str, list] = {addr: [] for addr in targets}
+        for addr in targets:
+            all_results[addr] = orch.check_email(session, profile, addr)
+
+    skipped = [{"source_id": d.source_id, "detail": d.detail} for d in statuses if not d.available]
+    runtime = [{"source_id": d.source_id, "detail": d.detail} for d in orch.runtime_disabled]
+
+    if as_json:
+        out = {
+            "results": {
+                addr: [_breach_row(r) for r in rows]
+                for addr, rows in all_results.items()
+            },
+            "providers": {
+                "active": [a.source_id for a in orch.adapters],
+                "skipped_at_startup": skipped,
+                "disabled_mid_run": runtime,
+            },
+        }
+        click.echo(json.dumps(out, indent=2))
+        return
+
+    total = 0
+    for addr, rows in all_results.items():
+        click.echo(f"\n{addr}")
+        if not rows:
+            click.echo("  (no breaches found)")
+            continue
+        total += len(rows)
+        for r in rows:
+            date = r.breach_date or "—"
+            click.echo(f"  {date:12}  [{r.source}]  {r.breach_name}")
+    click.echo(f"\nTotal exposures: {total} across {len(all_results)} address(es).")
+    click.echo(f"Active providers: {', '.join(a.source_id for a in orch.adapters) or '(none)'}")
+    if skipped:
+        click.echo("\nSkipped at startup (not configured):")
+        for s in skipped:
+            click.echo(f"  [{s['source_id']}] {s['detail']}")
+    if runtime:
+        click.echo("\nDisabled mid-run (auth or quota error):")
+        for s in runtime:
+            click.echo(f"  [{s['source_id']}] {s['detail']}")
+
+
+def _breach_row(r) -> dict:
+    import json as _json
+    return {
+        "source": r.source,
+        "email": r.email,
+        "breach_name": r.breach_name,
+        "breach_date": r.breach_date,
+        "data_classes": _json.loads(r.data_classes_json or "[]"),
+        "description_excerpt": r.description_excerpt,
+        "checked_at": r.checked_at.isoformat() if r.checked_at else None,
+    }
+
+
+@main.command("password-check")
+@click.option(
+    "--stdin",
+    "from_stdin",
+    is_flag=True,
+    help="Read the password from stdin instead of prompting. Use for piping; "
+         "the password never leaves your shell history this way only if your "
+         "source is also history-safe.",
+)
+def password_check_cmd(from_stdin: bool) -> None:
+    """Check whether a password appears in HIBP's breach corpus (k-anonymity).
+
+    No API key, no subscription, no persistence. We SHA-1 the password
+    locally and send only the first 5 hex characters of the hash to HIBP;
+    the password itself never crosses the wire. Nothing is written to the
+    database.
+    """
+    import httpx
+
+    from delete_me.breaches.passwords import PwnedPasswordsClient
+
+    if from_stdin:
+        password = sys.stdin.readline().rstrip("\n")
+        if not password:
+            click.echo("error: empty password on stdin", err=True)
+            sys.exit(2)
+    else:
+        password = click.prompt("Password", hide_input=True, confirmation_prompt=False)
+        if not password:
+            click.echo("error: empty password", err=True)
+            sys.exit(2)
+
+    try:
+        count = PwnedPasswordsClient().lookup(password)
+    except httpx.HTTPError as exc:
+        click.echo(f"error: pwned-passwords lookup failed: {exc}", err=True)
+        sys.exit(3)
+    finally:
+        # Best-effort: clear our local reference so the password isn't
+        # sitting in a long-lived frame after this function returns.
+        password = ""  # noqa: F841
+
+    if count == 0:
+        click.echo("not found in HIBP's breach corpus")
+    else:
+        click.echo(f"FOUND — this password has been seen {count:,} time(s) in known breaches")
+        click.echo("Treat it as compromised. Change it everywhere you've used it and switch to a password manager.")
+        sys.exit(1)
 
 
 @main.command("evidence")

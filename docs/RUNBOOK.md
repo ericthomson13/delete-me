@@ -71,6 +71,12 @@ uv run delete-me cases                    # status updates per audit verdict
 # If audit comes back noncompliant, build the evidence package:
 uv run delete-me evidence --case 1 --out /tmp/evidence
 ls /tmp/evidence/case-1
+
+# Discovery (Phase 9 + 10) — optional commands, should each give clean output:
+uv run delete-me presence-check                                # table + coverage footer
+uv run delete-me breach-check                                  # with no provider env vars, exits 2 with setup hints for HIBP/IntelX/DeHashed
+echo "hunter2" | uv run delete-me password-check --stdin       # k-anonymity, no key needed; "hunter2" is known-breached → exit 1
+
 unset DELETE_ME_DB_URL
 ```
 

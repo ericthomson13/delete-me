@@ -95,6 +95,25 @@ Download a signed installer for your OS from the
 In Tauri builds, your PII never leaves the device. Only signed letters and
 optional outbound email (Postmark) ever touch the network.
 
+## Environment variables
+
+All env vars are optional. Without them, the tool stays in safe defaults
+(dry-run sends, no breach lookups, local SQLite). Reference:
+
+| Variable | Used by | Default if unset |
+|---|---|---|
+| `DELETE_ME_DB_URL` | CLI + service | SQLite under platformdirs (see below) |
+| `POSTMARK_SERVER_TOKEN` | `send --live` | `send --live` errors; dry-run is unaffected |
+| `DELETE_ME_FROM_ADDRESS` | `send --live` | `send --live` errors; dry-run is unaffected |
+| `CALPRIVACY_DROP_ENDPOINT` + `CALPRIVACY_DROP_TOKEN` | `drop-submit --live` | dry-run writes the submission to disk and returns a synthetic receipt |
+| `HIBP_API_KEY` | `breach-check` (HIBP provider) | HIBP skipped; setup hint shown in the breach-check footer |
+| `INTELX_API_KEY` (optional `INTELX_BASE_URL`) | `breach-check` (IntelX provider) | IntelX skipped; setup hint shown |
+| `DEHASHED_USERNAME` + `DEHASHED_API_KEY` | `breach-check` (DeHashed provider) | DeHashed skipped; setup hint shown |
+
+For provider-by-provider trade-offs and signup links, see
+[`USER_GUIDE.md` → Discovery](USER_GUIDE.md#6b-discovery--find-out-where-youre-exposed-optional).
+`password-check` needs no env vars at all.
+
 ## Where is my data?
 
 - CLI mode: a SQLite file under the platform's user-data dir
