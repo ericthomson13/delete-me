@@ -185,10 +185,24 @@ def default_registry() -> dict[str, AuditAdapter]:
 
 
 def production_registry() -> dict[str, AuditAdapter]:
-    """Wire the real (experimental) adapters. Imported lazily for httpx cost."""
+    """Wire the real (experimental) adapters. Imported lazily for httpx cost.
+
+    Every adapter in this set is experimental: it can return inconclusive
+    at any time (anti-bot, HTML drift). The orchestrator handles that
+    gracefully — a single broken adapter never blocks other audits.
+    """
+    from .sources.familytreenow import FamilyTreeNowAdapter
+    from .sources.fastpeoplesearch import FastPeopleSearchAdapter
+    from .sources.nuwber import NuwberAdapter
+    from .sources.spokeo import SpokeoAdapter
+    from .sources.thatsthem import ThatsThemAdapter
     from .sources.truepeoplesearch import TruePeopleSearchAdapter
 
     return {
         "truepeoplesearch_search": TruePeopleSearchAdapter(),
-        # Future adapters land here, gated on Phase 2.x readiness.
+        "fastpeoplesearch_search": FastPeopleSearchAdapter(),
+        "familytreenow_search": FamilyTreeNowAdapter(),
+        "nuwber_search": NuwberAdapter(),
+        "thatsthem_search": ThatsThemAdapter(),
+        "spokeo_search": SpokeoAdapter(),
     }

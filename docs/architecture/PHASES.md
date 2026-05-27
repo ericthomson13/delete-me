@@ -242,15 +242,32 @@ Service surface (shipped in the same tranche):
   source); no re-query. Optional `?broker_id=` filter.
 - `DELETE_ME_AUDIT_USE_MOCK=1` swaps the registry for tests/demos.
 
-What's missing (explicit scope cutoffs):
+Adapter coverage (shipped in a follow-up tranche):
 
-- **Adapter coverage.** Today only `truepeoplesearch_search` is wired in
-  `production_registry()`. 16 broker YAMLs declare audit_sources they'd
-  like an adapter for; 34 brokers correctly have `audit_sources: []`
-  (enterprise aggregators with no public search). Adding adapters is the
-  next leverage point and tracked separately.
+- Shared base class `PeopleSearchAdapter` (`audit/sources/_people_search_base.py`)
+  holds the common dance — rate limit, anti-bot detection, name-in-card
+  heuristic, HTTP-error → inconclusive fallback. Subclasses are ~3-30
+  lines each.
+- 6 broker adapters wired in `production_registry()`: truepeoplesearch,
+  fastpeoplesearch, familytreenow, nuwber, thatsthem, spokeo. Every one
+  is marked experimental — selectors and URL shapes inferred from common
+  patterns and will need tuning against the live sites. Failures degrade
+  to inconclusive, never block a case.
+- 10 brokers still declare audit_sources without an adapter (beenverified,
+  instantcheckmate, intelius, mylife, peekyou, peoplefinder, peoplelooker,
+  radaris, truthfinder, whitepages). Adding each one is now a small PR
+  via the shared base. 34 enterprise-aggregator brokers correctly have
+  `audit_sources: []` and don't need adapters.
+
+What's missing:
+
 - **Tauri surface.** Desktop UI doesn't have a Discovery view yet. Wire
   through the new service endpoints in a follow-up.
+- **Empirical adapter validation.** The 5 new adapters were written from
+  common patterns, not from observed live-site responses. First real
+  run will likely surface needed selector or URL tweaks. Block-page
+  responses are safe (they degrade to inconclusive); the failure mode to
+  watch for is `found=False` when the consumer is actually listed.
 
 ## Phase 10 status
 
