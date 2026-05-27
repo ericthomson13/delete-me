@@ -204,3 +204,147 @@ export async function saveProfile(input: ProfileInput): Promise<ProfileRow> {
   }
   return (await res.json()) as ProfileRow;
 }
+
+// ============================================================ Discovery surface
+
+export type PresenceStatus = 'found' | 'not_found' | 'inconclusive';
+
+export interface PresenceResult {
+  id: number;
+  broker_id: string;
+  source: string;
+  status: PresenceStatus;
+  found: boolean;
+  inconclusive: boolean;
+  listings_url: string | null;
+  notes: string | null;
+  checked_at: string | null;
+}
+
+export interface PresenceCheckResponse {
+  results: PresenceResult[];
+  summary: {
+    found: number;
+    not_found: number;
+    inconclusive: number;
+    no_audit_source_configured: number;
+    brokers_checked: number;
+  };
+}
+
+export async function runPresenceCheck(
+  profileId: number,
+  options: { brokerIds?: string[]; freshDays?: number } = {},
+): Promise<PresenceCheckResponse> {
+  const base = await apiBase();
+  const body: Record<string, unknown> = {};
+  if (options.brokerIds !== undefined) body.broker_ids = options.brokerIds;
+  if (options.freshDays !== undefined) body.fresh_days = options.freshDays;
+  const res = await fetch(`${base}/profiles/${profileId}/presence-check`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`POST /profiles/${profileId}/presence-check failed: ${res.status} — ${text}`);
+  }
+  return (await res.json()) as PresenceCheckResponse;
+}
+
+export async function listPresenceResults(
+  profileId: number,
+  brokerId?: string,
+): Promise<PresenceResult[]> {
+  const base = await apiBase();
+  const url = brokerId
+    ? `${base}/profiles/${profileId}/presence-results?broker_id=${encodeURIComponent(brokerId)}`
+    : `${base}/profiles/${profileId}/presence-results`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`GET presence-results failed: ${res.status}`);
+  return (await res.json()) as PresenceResult[];
+}
+
+export type BreachProviderId = 'hibp' | 'intelx' | 'dehashed';
+
+export interface BreachProviderStatus {
+  source_id: BreachProviderId | string;
+  available: boolean;
+  detail: string;
+}
+
+export interface BreachProvidersResponse {
+  active: string[];
+  providers: BreachProviderStatus[];
+}
+
+export interface BreachExposure {
+  id: number;
+  source: string;
+  email: string;
+  breach_name: string;
+  breach_date: string | null;
+  data_classes: string[];
+  description_excerpt: string | null;
+  checked_at: string | null;
+}
+
+export interface BreachCheckResponse {
+  results: Record<string, BreachExposure[]>;
+  providers: {
+    active: string[];
+    skipped_at_startup: Array<{ source_id: string; detail: string }>;
+    disabled_mid_run: Array<{ source_id: string; detail: string }>;
+  };
+}
+
+export async function listBreachProviders(): Promise<BreachProvidersResponse> {
+  const base = await apiBase();
+  const res = await fetch(`${base}/breaches/providers`);
+  if (!res.ok) throw new Error(`GET /breaches/providers failed: ${res.status}`);
+  return (await res.json()) as BreachProvidersResponse;
+}
+
+export async function runBreachCheck(
+  profileId: number,
+  emails?: string[],
+): Promise<BreachCheckResponse> {
+  const base = await apiBase();
+  const body: Record<string, unknown> = {};
+  if (emails !== undefined) body.emails = emails;
+  const res = await fetch(`${base}/profiles/${profileId}/breach-check`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (res.status === 503) {
+    const detail = (await res.json()).detail;
+    const err = new Error('no breach providers configured');
+    (err as Error & { providers?: unknown }).providers = detail.providers;
+    throw err;
+  }
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`POST /profiles/${profileId}/breach-check failed: ${res.status} — ${text}`);
+  }
+  return (await res.json()) as BreachCheckResponse;
+}
+
+export interface PasswordCheckResponse {
+  breach_count: number;
+  found: boolean;
+}
+
+export async function checkPassword(password: string): Promise<PasswordCheckResponse> {
+  const base = await apiBase();
+  const res = await fetch(`${base}/passwords/check`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`POST /passwords/check failed: ${res.status} — ${text}`);
+  }
+  return (await res.json()) as PasswordCheckResponse;
+}
