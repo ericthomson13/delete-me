@@ -13,13 +13,15 @@ function isTauri(): boolean {
 
 export async function apiBase(): Promise<string> {
   if (cached) return cached;
+  let resolved: string;
   if (isTauri()) {
     const { invoke } = await import('@tauri-apps/api/core');
-    cached = await invoke<string>('get_api_base');
-    return cached;
+    resolved = await invoke<string>('get_api_base');
+  } else {
+    resolved = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8000';
   }
-  cached = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8000';
-  return cached;
+  cached = resolved;
+  return resolved;
 }
 
 export type CaseStatus =
