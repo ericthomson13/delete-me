@@ -1,0 +1,25 @@
+# DRAFT — not loaded by the active registry. See README.md in this dir.
+
+id: socialcatfish
+name: Social Catfish
+website: https://www.socialcatfish.com
+tier: people_search
+
+opt_out:
+  methods: []                       # TODO: confirm which methods the broker offers
+  # email: TODO
+  # web_form: TODO
+  # postal: TODO
+  # instructions_url: TODO
+
+accepts_authorized_agent: true
+agent_form_requirements: []
+required_pii: [full_name, current_address]
+optional_pii: [prior_addresses, email, phone]
+audit_sources: []
+
+statutes: [ccpa_1798_105]
+last_verified: 1970-01-01
+maintainer: "@needs-verification"
+notes: |
+  Reverse people / image search service. Verify opt-out path before promotion.

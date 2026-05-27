@@ -5,6 +5,12 @@ This is a 5-minute PR. You do not need to write code.
 > Adding submission *automation* for a broker that's already in the
 > registry? See [`ADDING_AN_AUTOMATION_SCRIPT.md`](ADDING_AN_AUTOMATION_SCRIPT.md)
 > instead.
+>
+> Promoting one of the schema-invalid drafts in
+> [`registry/brokers_draft/`](../registry/brokers_draft/) to the active
+> registry? See [`VERIFYING_DRAFT_BROKERS.md`](VERIFYING_DRAFT_BROKERS.md)
+> for the verification checklist. The drafts already have id / name /
+> website / tier prefilled; you fill in the verification-required fields.
 
 ## 1. Copy this template
 

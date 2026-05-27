@@ -1,0 +1,28 @@
+# DRAFT — not loaded by the active registry. See README.md in this dir.
+
+id: peoplesmart
+name: PeopleSmart
+website: https://www.peoplesmart.com
+parent_company: PeopleConnect
+tier: people_search
+
+opt_out:
+  methods: []                       # TODO: confirm; PeopleConnect family typically offers email + web form
+  # email: TODO
+  # web_form: TODO
+  # postal: TODO
+  # instructions_url: TODO
+
+accepts_authorized_agent: true
+agent_form_requirements: []
+required_pii: [full_name, current_address]
+optional_pii: [prior_addresses, email, phone, former_names]
+audit_sources: []
+
+statutes: [ccpa_1798_105]
+last_verified: 1970-01-01
+maintainer: "@needs-verification"
+notes: |
+  Sister site to BeenVerified / Intelius / PeopleLooker under PeopleConnect.
+  Opt-out flow often shared across the family; verify whether one form
+  covers all PeopleConnect sites before duplicating effort.

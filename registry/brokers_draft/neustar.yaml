@@ -1,0 +1,27 @@
+# DRAFT — not loaded by the active registry. See README.md in this dir.
+
+id: neustar
+name: Neustar
+website: https://www.home.neustar
+parent_company: TransUnion
+tier: enterprise_aggregator
+
+opt_out:
+  methods: []                       # TODO: confirm
+  # email: TODO
+  # web_form: TODO
+  # postal: TODO
+  # instructions_url: TODO
+
+accepts_authorized_agent: true
+agent_form_requirements: []
+required_pii: [full_name, current_address, email]
+optional_pii: [phone, prior_addresses]
+audit_sources: []
+
+statutes: [ccpa_1798_105]
+last_verified: 1970-01-01
+maintainer: "@needs-verification"
+notes: |
+  Identity, marketing, and risk data. Acquired by TransUnion in 2021;
+  verify whether opt-out flows are now shared with the parent.

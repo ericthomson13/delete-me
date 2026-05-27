@@ -15,7 +15,7 @@ can close when it lands.
 
 ### Phase 5 — Eastern states / top-50 broker coverage
 
-- [ ] [#4](https://github.com/ericthomson13/delete-me/issues/4) — Add 15 more brokers toward top-50 coverage
+- [ ] [#4](https://github.com/ericthomson13/delete-me/issues/4) — Add 15 more brokers toward top-50 coverage. *15 draft skeletons landed in `registry/brokers_draft/` (2026-05-27); each needs browser verification via [`VERIFYING_DRAFT_BROKERS.md`](VERIFYING_DRAFT_BROKERS.md) before promotion to the active registry.*
 - [ ] [#5](https://github.com/ericthomson13/delete-me/issues/5) — Browser-verify tranche-2 broker opt-out URLs
 
 ### Phase 6 — CalPrivacy DROP

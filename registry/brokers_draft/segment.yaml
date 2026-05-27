@@ -1,0 +1,31 @@
+# DRAFT — not loaded by the active registry. See README.md in this dir.
+
+id: segment
+name: Segment
+website: https://segment.com
+parent_company: Twilio
+tier: enterprise_aggregator
+
+opt_out:
+  methods: []                       # TODO: confirm; Segment is a B2B CDP, consumer opt-out routes through Twilio's privacy program
+  # email: TODO
+  # web_form: TODO
+  # postal: TODO
+  # instructions_url: TODO
+
+accepts_authorized_agent: true
+agent_form_requirements: []
+required_pii: [full_name, current_address, email]
+optional_pii: [phone]
+audit_sources: []
+
+statutes: [ccpa_1798_105]
+last_verified: 1970-01-01
+maintainer: "@needs-verification"
+notes: |
+  Customer Data Platform. Segment processes data on behalf of its
+  customers (B2B), so a consumer's data lives in Segment because some
+  business shipped it there. Verify whether the CCPA deletion request
+  routes through Twilio's central privacy program, and whether Segment
+  acts as service-provider or business under CCPA — that determines
+  whether the consumer-direct path even works.

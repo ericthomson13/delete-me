@@ -1,0 +1,25 @@
+# DRAFT — not loaded by the active registry. See README.md in this dir.
+
+id: idcrawl
+name: IDCrawl
+website: https://www.idcrawl.com
+tier: people_search
+
+opt_out:
+  methods: []                       # TODO: confirm which methods the broker actually offers
+  # email: TODO                     # confirm privacy/opt-out email
+  # web_form: TODO                  # URL of the opt-out form
+  # postal: TODO                    # full address as a single line, if postal is accepted
+  # instructions_url: TODO          # public-facing opt-out instructions page
+
+accepts_authorized_agent: true      # CCPA-covered businesses must accept agents; verifier should confirm
+agent_form_requirements: []         # TODO: confirm if broker imposes extra requirements (notarized, ID, etc.)
+required_pii: [full_name, current_address]
+optional_pii: [prior_addresses, email, phone]
+audit_sources: []                   # add an `idcrawl_search` adapter ID here if/when the adapter ships
+
+statutes: [ccpa_1798_105]
+last_verified: 1970-01-01           # sentinel: never verified by a human
+maintainer: "@needs-verification"
+notes: |
+  Draft entry — verify opt-out path before promoting to registry/brokers/.

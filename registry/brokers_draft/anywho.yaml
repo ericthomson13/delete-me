@@ -1,0 +1,26 @@
+# DRAFT — not loaded by the active registry. See README.md in this dir.
+
+id: anywho
+name: AnyWho
+website: https://www.anywho.com
+tier: people_search
+
+opt_out:
+  methods: []                       # TODO: confirm — historically Intelius/Whitepages-related; may share an opt-out
+  # email: TODO
+  # web_form: TODO
+  # postal: TODO
+  # instructions_url: TODO
+
+accepts_authorized_agent: true
+agent_form_requirements: []
+required_pii: [full_name, current_address]
+optional_pii: [prior_addresses, phone]
+audit_sources: []
+
+statutes: [ccpa_1798_105]
+last_verified: 1970-01-01
+maintainer: "@needs-verification"
+notes: |
+  Reverse phone + people directory. Historic ownership has shifted; verify
+  current owner and whether opt-out is delegated to a parent (Intelius?).
