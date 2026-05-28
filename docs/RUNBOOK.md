@@ -187,6 +187,33 @@ curl http://localhost:8080/cases/1
 For real sends, also check Postmark's dashboard for delivery state and
 bounces.
 
+### Adapter health monitoring (automatic)
+
+Two weekly GitHub Actions workflows keep the experimental adapters
+honest without manual probing:
+
+- `.github/workflows/automation-health.yml` — Monday 14:17 UTC.
+  Dry-runs every Tier-A/B submission script against a synthetic
+  profile. Files `automation-broken` issues on regression; bot-commits
+  `automation.last_automation_pass` date bumps on success.
+- `.github/workflows/audit-adapter-health.yml` — Tuesday 14:23 UTC.
+  Probes every audit adapter in `production_registry()` against a
+  synthetic name that no broker should match. Files
+  `audit-adapter-broken` issues on regression; bot-commits
+  `audit_sources_last_pass.<source_id>` date bumps on success.
+
+When an issue lands in your inbox, the body explains the failure mode
+(`blocked` / `false_positive` / `error`) and points at the likely fix
+(usually a one-line `CARD_CLASS_PATTERN` or selector tweak).
+
+To probe manually before the next scheduled run:
+
+```sh
+uv run delete-me audit-adapter-health        # human table
+uv run delete-me audit-adapter-health --json # machine-readable
+uv run delete-me automation-health
+```
+
 ## 4. Common operations cheatsheet
 
 | Task | Command |
@@ -198,6 +225,12 @@ bounces.
 | Run a single test | `uv run pytest core-py/tests/test_letter_engine.py -k agent -v` |
 | Re-validate registry | `uv run delete-me validate-registry` |
 | Rebuild Docker image | `docker compose ... build --no-cache service` |
+| Probe every audit adapter against a synthetic profile | `uv run delete-me audit-adapter-health` |
+| Same, machine-readable | `uv run delete-me audit-adapter-health --json` |
+| Probe every Tier-A/B automation script | `uv run delete-me automation-health` |
+| Run a presence-check for one profile | `uv run delete-me presence-check --profile-id N` |
+| Run presence-check for every profile | `uv run delete-me presence-check --all-profiles` |
+| Disable adapter rate limiting (dev only) | `DELETE_ME_AUDIT_RATE_LIMIT_S=0 uv run delete-me presence-check` |
 
 ## 5. When something is wrong
 

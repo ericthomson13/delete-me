@@ -25,6 +25,10 @@ After ~20 minutes you'll have:
   → `sent` → eventually `deleted_confirmed` or `noncompliant`).
 - An **audit due date** 60 days out — the date the (future) audit pipeline
   will check whether the broker actually complied.
+- Optionally, a **discovery picture** — which brokers actually list you
+  today (presence-check), which breaches your email appears in
+  (breach-check), and whether a specific password has been seen in any
+  known breach (password-check). All optional; see step 6b below.
 
 ---
 
@@ -306,7 +310,50 @@ curl -X POST http://localhost:8080/cases/1/evidence
 
 # Download the zip:
 curl -OJ http://localhost:8080/cases/1/evidence/download
+
+# Cross-case views (back the Tauri Audits / Evidence index pages):
+curl 'http://localhost:8080/audits?limit=100'   # newest first, joined with case+broker
+curl http://localhost:8080/evidence              # every case with a built package
 ```
+
+### 9. Discovery (HTTP)
+
+```sh
+# Which breach providers are configured? (HIBP / IntelX / DeHashed)
+curl http://localhost:8080/breaches/providers
+
+# Pre-send presence-check for a profile (skip brokers that don't list you):
+curl -X POST http://localhost:8080/profiles/1/presence-check \
+    -H "content-type: application/json" \
+    -d '{"fresh_days": 7}'
+
+# Look up which breaches your email appears in (requires at least one
+# breach provider env var set — see /breaches/providers above):
+curl -X POST http://localhost:8080/profiles/1/breach-check \
+    -H "content-type: application/json" \
+    -d '{}'
+
+# k-anonymity password check (no API key needed, password hashed locally,
+# only SHA-1 prefix leaves the service):
+curl -X POST http://localhost:8080/passwords/check \
+    -H "content-type: application/json" \
+    -d '{"password": "hunter2"}'
+# {"breach_count": 65744, "found": true}
+```
+
+### 10. Locking down the service (remote clients)
+
+If your `delete-me` container is reachable beyond loopback (anything
+other than a Tauri sidecar talking to itself), set `DELETE_ME_API_KEY`
+in `docker/.env` and pass `X-API-Key: <key>` on every request. `/health`
+stays exempt for liveness probes.
+
+```sh
+# In docker/.env: DELETE_ME_API_KEY=some-random-string
+curl -H 'X-API-Key: some-random-string' http://your-host:8080/cases
+```
+
+Full env-var reference: [`INSTALL.md → Environment variables`](INSTALL.md#environment-variables).
 
 The docker-compose stack also runs a separate `scheduler` container that
 invokes `delete-me audit-due --limit 100` on a configurable interval

@@ -4,9 +4,9 @@ Phase 4 of the [project roadmap](../docs/architecture/PHASES.md). Wraps the
 existing FastAPI service as an embedded sidecar so non-technical users can
 install via DMG / MSI / AppImage with no terminal.
 
-> **Status: vertical slice.** One screen (case list) is wired end-to-end.
-> Remaining work: rest of the UI, code-signing, release CI. See
-> "Remaining work" below.
+> **Status: feature-complete UI, design polish pending.** Six screens
+> wired end-to-end (see "Screens" below); the open work is real product
+> artwork and the first-run encryption flow.
 
 ## Layout
 
@@ -18,8 +18,23 @@ tauri-app/
 │   ├── capabilities/   Tauri v2 permissions
 │   └── binaries/       PyInstaller output lands here (gitignored)
 └── ui/                 SvelteKit (Svelte 5, adapter-static)
-    └── src/routes/+page.svelte   Case list
+    └── src/routes/             Six screens, file-based routing
 ```
+
+## Screens
+
+Navigation lives in `ui/src/routes/+layout.svelte`. Every screen owns
+its own state and fetches from the sidecar via `ui/src/lib/api.ts`.
+
+| Route        | Purpose                                                                                          |
+|--------------|--------------------------------------------------------------------------------------------------|
+| `/`          | Case list — every deletion case with status, broker, sent date                                  |
+| `/profiles`  | People CRUD — add/edit consumer profiles                                                        |
+| `/brokers`   | Broker registry browser with tier + automation + DROP + agent filters                           |
+| `/discovery` | Presence-check + breach-check + password-check (k-anonymity) for the selected profile           |
+| `/audits`    | Cross-case audit log with status filters and text search                                        |
+| `/evidence`  | Cross-case evidence packages with on-disk indicator and direct .zip download                    |
+| `/cases/[id]`| Case detail — letter, audits, automation, evidence build/download, send                         |
 
 The FastAPI service itself still lives at `service/` in the repo root; the
 sidecar entry is `service/sidecar_entry.py`.
@@ -109,9 +124,9 @@ the Rust test proves the shell parses it correctly. The remaining surface
 
 ## Remaining work for Phase 4
 
-- [ ] Build out screens for profiles, brokers, audits, evidence (currently only case list)
-- [ ] Replace placeholder icons in `src-tauri/icons/` with real product artwork (`tauri icon` CLI generates from a single source PNG)
-- [ ] First-run experience: prompt for an argon2id passphrase to derive the SQLite encryption key
+- [x] Build out screens for profiles, brokers, audits, evidence (and Discovery)
+- [ ] Replace placeholder icons in `src-tauri/icons/` with real product artwork (`tauri icon` CLI generates from a single source PNG). See [`MAINTAINER_CHECKLIST.md`](../docs/MAINTAINER_CHECKLIST.md#4-design-assets).
+- [ ] First-run experience: prompt for an argon2id passphrase to derive the SQLite encryption key. Decision: SQLCipher + OS keychain hybrid (research deposited).
 - [x] Sidecar healthcheck + auto-restart (`src-tauri/src/lib.rs` — see `HealthState` and `spawn_health_monitor`)
 - [x] Release CI workflow (`.github/workflows/release-desktop.yml` — unsigned bundles only)
 - [x] Code-signing playbook (`docs/RELEASING.md` — manual maintainer step)
