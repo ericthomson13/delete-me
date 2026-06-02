@@ -18,6 +18,8 @@ optional_pii:
 re_aggregation_days: 60
 audit_sources:
   - peekyou_search
+audit_sources_last_pass:
+  peekyou_search: 2026-06-02
 statutes:
   - ccpa_1798_105
 last_verified: 2026-05-19
