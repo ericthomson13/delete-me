@@ -31,7 +31,7 @@ its own state and fetches from the sidecar via `ui/src/lib/api.ts`.
 | `/`          | Case list — every deletion case with status, broker, sent date                                  |
 | `/profiles`  | People CRUD — add/edit consumer profiles                                                        |
 | `/brokers`   | Broker registry browser with tier + automation + DROP + agent filters                           |
-| `/discovery` | Presence-check + breach-check + password-check (k-anonymity) for the selected profile           |
+| `/discovery` | Presence-check + breach-check + password-check (k-anonymity) for the selected profile; per-row "Create case" CTA on found brokers, or a link to the existing case if one exists |
 | `/audits`    | Cross-case audit log with status filters and text search                                        |
 | `/evidence`  | Cross-case evidence packages with on-disk indicator and direct .zip download                    |
 | `/cases/[id]`| Case detail — letter, audits, automation, evidence build/download, send                         |

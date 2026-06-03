@@ -2,12 +2,15 @@
   import { onMount } from 'svelte';
   import {
     checkPassword,
+    createCase,
     listBreachProviders,
+    listCases,
     listProfiles,
     runBreachCheck,
     runPresenceCheck,
     type BreachCheckResponse,
     type BreachProvidersResponse,
+    type CaseRow,
     type PasswordCheckResponse,
     type PresenceCheckResponse,
     type ProfileRow,
@@ -40,6 +43,12 @@
   let passwordRunning = $state(false);
   let passwordError = $state<string | null>(null);
 
+  // Existing cases for the current profile, keyed by broker_id. Drives the
+  // "Create case" vs "Existing case" CTA on each presence row.
+  let casesByBroker = $state<Record<string, CaseRow>>({});
+  let creatingFor = $state<Record<string, boolean>>({});
+  let createError = $state<Record<string, string>>({});
+
   let selectedProfile = $derived(profiles.find((p) => p.id === profileId) ?? null);
 
   onMount(async () => {
@@ -56,6 +65,31 @@
     }
   });
 
+  // Re-fetch cases whenever the active profile changes.
+  $effect(() => {
+    const pid = profileId;
+    if (pid === null) {
+      casesByBroker = {};
+      return;
+    }
+    void refreshCasesForProfile(pid);
+  });
+
+  async function refreshCasesForProfile(pid: number) {
+    try {
+      const cases = await listCases(pid);
+      const map: Record<string, CaseRow> = {};
+      // First case wins (matches the cases-from-presence CLI semantics).
+      for (const c of cases) {
+        if (!(c.broker_id in map)) map[c.broker_id] = c;
+      }
+      casesByBroker = map;
+    } catch (e) {
+      // Non-fatal — the CTA just defaults to "Create case" if we can't tell.
+      console.error('listCases failed', e);
+    }
+  }
+
   async function onRunPresence() {
     if (profileId === null) return;
     presenceError = null;
@@ -66,6 +100,27 @@
       presenceError = e instanceof Error ? e.message : String(e);
     } finally {
       presenceRunning = false;
+    }
+  }
+
+  async function onCreateCase(brokerId: string) {
+    if (profileId === null) return;
+    delete createError[brokerId];
+    createError = { ...createError };
+    creatingFor = { ...creatingFor, [brokerId]: true };
+    try {
+      const created = await createCase(profileId, brokerId);
+      casesByBroker = {
+        ...casesByBroker,
+        [brokerId]: created as unknown as CaseRow,
+      };
+    } catch (e) {
+      createError = {
+        ...createError,
+        [brokerId]: e instanceof Error ? e.message : String(e),
+      };
+    } finally {
+      creatingFor = { ...creatingFor, [brokerId]: false };
     }
   }
 
@@ -160,7 +215,13 @@
       {:else}
         <table>
           <thead>
-            <tr><th>Broker</th><th>Source</th><th>Status</th><th>Listing</th></tr>
+            <tr>
+              <th>Broker</th>
+              <th>Source</th>
+              <th>Status</th>
+              <th>Listing</th>
+              <th>Case</th>
+            </tr>
           </thead>
           <tbody>
             {#each presence.results.filter((r) => r.source !== '(none)') as r}
@@ -171,6 +232,27 @@
                 <td>
                   {#if r.listings_url}
                     <a href={r.listings_url} target="_blank" rel="noreferrer noopener">open</a>
+                  {:else}
+                    —
+                  {/if}
+                </td>
+                <td>
+                  {#if casesByBroker[r.broker_id]}
+                    <a href={`/cases/${casesByBroker[r.broker_id].id}`}>
+                      #{casesByBroker[r.broker_id].id}
+                      <span class="muted">({casesByBroker[r.broker_id].status.replace(/_/g, ' ')})</span>
+                    </a>
+                  {:else if r.status === 'found'}
+                    <button
+                      class="link-button"
+                      onclick={() => onCreateCase(r.broker_id)}
+                      disabled={creatingFor[r.broker_id]}
+                    >
+                      {creatingFor[r.broker_id] ? 'creating…' : 'Create case'}
+                    </button>
+                    {#if createError[r.broker_id]}
+                      <div class="row-error">{createError[r.broker_id]}</div>
+                    {/if}
                   {:else}
                     —
                   {/if}
@@ -496,5 +578,24 @@
     border: 1px solid var(--border);
     border-radius: 5px;
     font-size: 0.95rem;
+  }
+
+  .link-button {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: inherit;
+    font-family: inherit;
+    text-decoration: underline;
+  }
+  .link-button:hover:not(:disabled) { color: var(--accent-strong); }
+  .link-button:disabled { color: var(--fg-muted); cursor: wait; }
+
+  .row-error {
+    margin-top: 0.2rem;
+    color: var(--error);
+    font-size: 0.8em;
   }
 </style>

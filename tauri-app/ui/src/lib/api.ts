@@ -72,11 +72,32 @@ export interface EvidenceBuildResult {
   file_count: number;
 }
 
-export async function listCases(): Promise<CaseRow[]> {
+export async function listCases(profileId?: number): Promise<CaseRow[]> {
   const base = await apiBase();
-  const res = await fetch(`${base}/cases`);
+  const url = profileId !== undefined
+    ? `${base}/cases?profile_id=${profileId}`
+    : `${base}/cases`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`GET /cases failed: ${res.status}`);
   return (await res.json()) as CaseRow[];
+}
+
+export interface CreatedCase extends CaseDetail {
+  agent_designation_markdown: string | null;
+}
+
+export async function createCase(profileId: number, brokerId: string): Promise<CreatedCase> {
+  const base = await apiBase();
+  const res = await fetch(`${base}/cases`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ profile_id: profileId, broker_id: brokerId }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`POST /cases failed: ${res.status} — ${text}`);
+  }
+  return (await res.json()) as CreatedCase;
 }
 
 export async function getCase(id: number): Promise<CaseDetail> {
