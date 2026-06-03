@@ -33,7 +33,7 @@ from delete_me.cases import (
     submit_via_drop,
     upsert_profile,
 )
-from delete_me.db import Case, Profile
+from delete_me.db import Case, CaseStatus, Profile
 from delete_me.db.session import default_db_url, get_session, init_db
 from delete_me.evidence import PackageBuilder
 from delete_me.letters import LetterEngine
@@ -264,6 +264,120 @@ def case_create(profile: Path, broker_id: str) -> None:
             click.echo(f"agent designation sha256: {designation.document_sha256}")
 
 
+@main.command("cases-from-presence")
+@click.option(
+    "--profile-id",
+    type=int,
+    default=None,
+    help="Target a specific profile by id. Default: the first profile in the DB.",
+)
+@click.option("--json", "as_json", is_flag=True, help="Emit JSON instead of a table.")
+def cases_from_presence_cmd(profile_id: int | None, as_json: bool) -> None:
+    """Draft a case per broker the profile is currently listed on.
+
+    Reads the latest PresenceResult rows for the profile and drafts a case
+    for every broker where at least one source reports found=True. Brokers
+    that already have ANY case in the DB are skipped (the user can
+    explicitly `case-create --broker X` again for a re-removal cycle).
+
+    Run `presence-check` first if you haven't recently.
+    """
+    from delete_me.audit import found_broker_ids
+    from delete_me.db import Case
+
+    init_db()
+    with get_session() as session:
+        if profile_id is not None:
+            profile = session.get(Profile, profile_id)
+            if profile is None:
+                click.echo(f"error: profile {profile_id} not found", err=True)
+                sys.exit(2)
+        else:
+            profile = session.exec(select(Profile).order_by(Profile.id)).first()
+            if profile is None:
+                click.echo(
+                    "error: no profile in DB. Run `delete-me init` then "
+                    "`delete-me case-create` first.",
+                    err=True,
+                )
+                sys.exit(2)
+
+        # Capture for use after the session closes — accessing ORM attrs
+        # post-close raises DetachedInstanceError.
+        resolved_profile_id = profile.id
+        candidates = found_broker_ids(session, profile.id)
+        if not candidates:
+            click.echo(
+                "No brokers have you currently listed. Run `delete-me presence-check` "
+                "first, or check that recent runs returned found=True for at least "
+                "one broker."
+            )
+            return
+
+        # Map existing cases per broker so we know which to skip.
+        existing_cases = list(
+            session.exec(select(Case).where(Case.profile_id == profile.id))
+        )
+        existing_by_broker: dict[str, Case] = {}
+        for c in existing_cases:
+            existing_by_broker.setdefault(c.broker_id, c)
+
+        rows: list[dict] = []
+        for broker_id in candidates:
+            existing = existing_by_broker.get(broker_id)
+            if existing is not None:
+                rows.append({
+                    "broker_id": broker_id,
+                    "action": "skipped_existing",
+                    "case_id": existing.id,
+                    "case_status": existing.status.value,
+                })
+                continue
+            try:
+                case, _designation = draft_case(session, profile, broker_id)
+            except ValueError as exc:
+                rows.append({
+                    "broker_id": broker_id,
+                    "action": "failed",
+                    "case_id": None,
+                    "case_status": None,
+                    "error": str(exc),
+                })
+                continue
+            rows.append({
+                "broker_id": broker_id,
+                "action": "created",
+                "case_id": case.id,
+                "case_status": case.status.value,
+            })
+
+    created = sum(1 for r in rows if r["action"] == "created")
+    skipped = sum(1 for r in rows if r["action"] == "skipped_existing")
+    failed = sum(1 for r in rows if r["action"] == "failed")
+
+    if as_json:
+        click.echo(json.dumps({
+            "profile_id": resolved_profile_id,
+            "rows": rows,
+            "summary": {"created": created, "skipped_existing": skipped, "failed": failed},
+        }, indent=2))
+        return
+
+    for r in rows:
+        if r["action"] == "created":
+            click.echo(f"created  {r['broker_id']:24}  case #{r['case_id']}")
+        elif r["action"] == "skipped_existing":
+            click.echo(
+                f"skipped  {r['broker_id']:24}  existing case #{r['case_id']} "
+                f"(status={r['case_status']})"
+            )
+        else:
+            click.echo(f"failed   {r['broker_id']:24}  {r.get('error', '')}", err=True)
+    click.echo(
+        f"\n{created} drafted, {skipped} skipped (existing), {failed} failed."
+    )
+
+
 @main.command("cases")
 def cases_list() -> None:
     """List local cases (most recent first)."""
@@ -281,7 +395,19 @@ def cases_list() -> None:
 
 
 @main.command("send")
-@click.option("--case", "case_id", required=True, type=int)
+@click.option("--case", "case_id", type=int, default=None)
+@click.option(
+    "--all-drafts",
+    is_flag=True,
+    default=False,
+    help="Send every case in DRAFT status (optionally filtered by --profile-id). Mutually exclusive with --case.",
+)
+@click.option(
+    "--profile-id",
+    type=int,
+    default=None,
+    help="With --all-drafts, scope the batch to one profile's drafts. Default: every draft regardless of profile.",
+)
 @click.option(
     "--live/--dry-run",
     default=False,
@@ -302,40 +428,137 @@ def cases_list() -> None:
     default=False,
     help="With --check-first, send even if presence reports not-found.",
 )
-def send_cmd(case_id: int, live: bool, check_first: bool, force: bool) -> None:
-    """Send (or dry-run-send) a case's letter via Postmark."""
+def send_cmd(
+    case_id: int | None,
+    all_drafts: bool,
+    profile_id: int | None,
+    live: bool,
+    check_first: bool,
+    force: bool,
+) -> None:
+    """Send (or dry-run-send) one case's letter, or every draft case.
+
+    Either --case N or --all-drafts is required. --all-drafts iterates every
+    case in DRAFT status (the natural state right after `case-create` or
+    `cases-from-presence`), respecting --check-first and --force per case.
+    """
+    if case_id is None and not all_drafts:
+        click.echo("error: pass --case N or --all-drafts", err=True)
+        sys.exit(2)
+    if case_id is not None and all_drafts:
+        click.echo("error: --case and --all-drafts are mutually exclusive", err=True)
+        sys.exit(2)
+
     init_db()
     transport = PostmarkTransport()
     with get_session() as session:
-        case = session.get(Case, case_id)
-        if not case:
-            click.echo(f"error: case {case_id} not found", err=True)
-            sys.exit(2)
-
-        if check_first:
-            broker_brokers = [b for b in load_brokers() if b.id == case.broker_id]
-            profile = session.get(Profile, case.profile_id)
-            if not profile:
-                click.echo(f"error: case {case_id} has no profile", err=True)
-                sys.exit(2)
-            orch = PresenceOrchestrator.from_registry(production_registry())
-            presence = orch.check_profile(session, profile, brokers=broker_brokers)
-            if not _should_send(presence, force=force):
-                click.echo(json.dumps({
-                    "skipped": True,
-                    "case_id": case_id,
-                    "reason": "presence-check returned not-found for every configured source; pass --force to send anyway",
-                    "presence": [_presence_row(r) for r in presence],
-                }, indent=2))
+        if all_drafts:
+            stmt = select(Case).where(Case.status == CaseStatus.DRAFT).order_by(Case.id)
+            if profile_id is not None:
+                stmt = stmt.where(Case.profile_id == profile_id)
+            targets = list(session.exec(stmt))
+            if not targets:
+                click.echo(json.dumps({"sent": [], "skipped": [], "failed": [], "summary": {
+                    "total": 0, "sent": 0, "skipped": 0, "failed": 0,
+                }}, indent=2))
                 return
+        else:
+            case = session.get(Case, case_id)
+            if not case:
+                click.echo(f"error: case {case_id} not found", err=True)
+                sys.exit(2)
+            targets = [case]
 
-        try:
-            result = send_case(session, case, transport, live=live)
-        except ValueError as exc:
-            click.echo(f"error: {exc}", err=True)
-            sys.exit(2)
+        sent_rows: list[dict] = []
+        skipped_rows: list[dict] = []
+        failed_rows: list[dict] = []
 
-        click.echo(json.dumps({"case": case_as_dict(case), "dry_run": result.dry_run}, indent=2))
+        for case in targets:
+            outcome = _send_one(
+                session, case, transport,
+                live=live, check_first=check_first, force=force,
+            )
+            if outcome["action"] == "sent":
+                sent_rows.append(outcome)
+            elif outcome["action"] == "skipped":
+                skipped_rows.append(outcome)
+            else:
+                failed_rows.append(outcome)
+
+    if all_drafts:
+        click.echo(json.dumps({
+            "sent": sent_rows,
+            "skipped": skipped_rows,
+            "failed": failed_rows,
+            "summary": {
+                "total": len(targets),
+                "sent": len(sent_rows),
+                "skipped": len(skipped_rows),
+                "failed": len(failed_rows),
+            },
+        }, indent=2))
+        return
+
+    # Single-case shape — preserve the existing output shape so scripts that
+    # parsed `delete-me send --case N` keep working.
+    outcome = (sent_rows + skipped_rows + failed_rows)[0]
+    if outcome["action"] == "sent":
+        click.echo(json.dumps({"case": outcome["case"], "dry_run": outcome["dry_run"]}, indent=2))
+    elif outcome["action"] == "skipped":
+        click.echo(json.dumps({
+            "skipped": True,
+            "case_id": outcome["case_id"],
+            "reason": outcome["reason"],
+            "presence": outcome.get("presence", []),
+        }, indent=2))
+    else:
+        click.echo(f"error: {outcome['error']}", err=True)
+        sys.exit(2)
+
+
+def _send_one(
+    session,
+    case,
+    transport,
+    *,
+    live: bool,
+    check_first: bool,
+    force: bool,
+) -> dict:
+    """Send (or skip) one case; return a structured outcome dict."""
+    if check_first:
+        broker_brokers = [b for b in load_brokers() if b.id == case.broker_id]
+        profile = session.get(Profile, case.profile_id)
+        if not profile:
+            return {
+                "action": "failed", "case_id": case.id,
+                "error": f"case {case.id} has no profile",
+            }
+        orch = PresenceOrchestrator.from_registry(production_registry())
+        presence = orch.check_profile(session, profile, brokers=broker_brokers)
+        if not _should_send(presence, force=force):
+            return {
+                "action": "skipped",
+                "case_id": case.id,
+                "broker_id": case.broker_id,
+                "reason": "presence-check returned not-found for every configured source; pass --force to send anyway",
+                "presence": [_presence_row(r) for r in presence],
+            }
+
+    try:
+        result = send_case(session, case, transport, live=live)
+    except ValueError as exc:
+        return {
+            "action": "failed", "case_id": case.id,
+            "broker_id": case.broker_id, "error": str(exc),
+        }
+    return {
+        "action": "sent",
+        "case_id": case.id,
+        "broker_id": case.broker_id,
+        "dry_run": result.dry_run,
+        "case": case_as_dict(case),
+    }
 
 
 def _should_send(presence, *, force: bool) -> bool:

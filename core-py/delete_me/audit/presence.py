@@ -141,6 +141,35 @@ class PresenceOrchestrator:
         return results
 
 
+def found_broker_ids(session: Session, profile_id: int) -> list[str]:
+    """Return broker_ids where the most recent PresenceResult for at least one
+    source has found=True. Used by `cases-from-presence` to decide which
+    brokers to draft letters for.
+
+    A broker is considered "found" if its newest row per source has found=True.
+    A stale True followed by a fresh False (the user was removed since) does
+    NOT count — the freshest row per (broker, source) wins.
+    """
+    rows = list(
+        session.exec(
+            select(PresenceResult)
+            .where(PresenceResult.profile_id == profile_id)
+            .order_by(PresenceResult.checked_at.desc())
+        )
+    )
+    # Reduce to latest row per (broker, source); newest first means first-seen
+    # is the winner.
+    latest: dict[tuple[str, str], PresenceResult] = {}
+    for r in rows:
+        latest.setdefault((r.broker_id, r.source), r)
+
+    found_set: set[str] = set()
+    for (broker_id, _), row in latest.items():
+        if row.found:
+            found_set.add(broker_id)
+    return sorted(found_set)
+
+
 def latest_for_broker(
     session: Session, profile_id: int, broker_id: str
 ) -> list[PresenceResult]:

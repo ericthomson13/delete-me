@@ -112,6 +112,26 @@ Results are cached per `(profile, broker, source)` for 7 days by default (`--fre
 
 For multi-profile setups (docker self-host with several users): `--all-profiles` runs the check against every profile in the DB; `--profile-id N` targets a specific one. They're mutually exclusive; default is the first profile by id (current behavior).
 
+**Close the loop in one step** — after `presence-check` shows you on N brokers, `cases-from-presence` drafts a case per broker where the latest result has `found=True`, skipping any broker that already has a case:
+
+```sh
+uv run delete-me cases-from-presence
+# created  spokeo                    case #5
+# created  mylife                    case #6
+# skipped  truepeoplesearch          existing case #3 (status=sent_dry_run)
+# 2 drafted, 1 skipped (existing), 0 failed.
+```
+
+Then batch-send every draft:
+
+```sh
+uv run delete-me send --all-drafts             # dry-run, every DRAFT case
+uv run delete-me send --all-drafts --live      # actually mail them (needs Postmark)
+uv run delete-me send --all-drafts --check-first  # presence-check each broker first
+```
+
+`--profile-id N` scopes the batch to one profile. Brokers without an email opt-out channel fail per case but don't abort the batch.
+
 **Breach-check** — has your email appeared in known breaches? Supports three independently optional providers; configure as many or as few as you want.
 
 **Which providers should I configure?** Each has a different corpus and a different price. Pick based on what you want coverage for:
