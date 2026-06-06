@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import os
 
-from delete_me.audit import PresenceOrchestrator
+from delete_me.audit import PresenceOrchestrator, found_broker_ids
 from delete_me.audit.orchestrator import default_registry, production_registry
-from delete_me.db import PresenceResult, Profile
+from delete_me.cases import draft_case
+from delete_me.db import Case, PresenceResult, Profile
 from delete_me.registry import load_brokers
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -96,6 +97,71 @@ def run_presence_check(
             "no_audit_source_configured": no_source,
             "brokers_checked": len(selected),
         },
+    }
+
+
+@router.post("/profiles/{profile_id}/cases-from-presence")
+def cases_from_presence(
+    profile_id: int,
+    session: Session = Depends(get_session),
+) -> dict:
+    """Draft a case per broker the profile is currently listed on.
+
+    Mirrors `delete-me cases-from-presence`. Reads the latest
+    PresenceResult rows per (broker, source); for every broker where at
+    least one source has found=True, drafts a case via the same
+    `draft_case` helper the CLI uses. Brokers that already have any
+    case for this profile are skipped (the caller can use POST /cases
+    directly for a re-removal cycle).
+    """
+    profile = session.get(Profile, profile_id)
+    if not profile:
+        raise HTTPException(404, f"profile {profile_id} not found")
+
+    candidates = found_broker_ids(session, profile_id)
+    existing = list(
+        session.exec(select(Case).where(Case.profile_id == profile_id))
+    )
+    existing_by_broker: dict[str, Case] = {}
+    for c in existing:
+        existing_by_broker.setdefault(c.broker_id, c)
+
+    rows: list[dict] = []
+    for broker_id in candidates:
+        prior = existing_by_broker.get(broker_id)
+        if prior is not None:
+            rows.append({
+                "broker_id": broker_id,
+                "action": "skipped_existing",
+                "case_id": prior.id,
+                "case_status": prior.status.value,
+            })
+            continue
+        try:
+            case, _designation = draft_case(session, profile, broker_id)
+        except ValueError as exc:
+            rows.append({
+                "broker_id": broker_id,
+                "action": "failed",
+                "case_id": None,
+                "case_status": None,
+                "error": str(exc),
+            })
+            continue
+        rows.append({
+            "broker_id": broker_id,
+            "action": "created",
+            "case_id": case.id,
+            "case_status": case.status.value,
+        })
+
+    created = sum(1 for r in rows if r["action"] == "created")
+    skipped = sum(1 for r in rows if r["action"] == "skipped_existing")
+    failed = sum(1 for r in rows if r["action"] == "failed")
+    return {
+        "profile_id": profile_id,
+        "rows": rows,
+        "summary": {"created": created, "skipped_existing": skipped, "failed": failed},
     }
 
 

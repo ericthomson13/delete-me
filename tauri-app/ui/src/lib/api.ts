@@ -100,6 +100,56 @@ export async function createCase(profileId: number, brokerId: string): Promise<C
   return (await res.json()) as CreatedCase;
 }
 
+export interface CasesFromPresenceRow {
+  broker_id: string;
+  action: 'created' | 'skipped_existing' | 'failed';
+  case_id: number | null;
+  case_status: string | null;
+  error?: string;
+}
+
+export interface CasesFromPresenceResponse {
+  profile_id: number;
+  rows: CasesFromPresenceRow[];
+  summary: { created: number; skipped_existing: number; failed: number };
+}
+
+export async function casesFromPresence(profileId: number): Promise<CasesFromPresenceResponse> {
+  const base = await apiBase();
+  const res = await fetch(`${base}/profiles/${profileId}/cases-from-presence`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`POST /profiles/${profileId}/cases-from-presence failed: ${res.status} — ${text}`);
+  }
+  return (await res.json()) as CasesFromPresenceResponse;
+}
+
+export interface SendDraftsResponse {
+  sent: Array<{ case_id: number; broker_id: string; dry_run: boolean; case: CaseRow }>;
+  skipped: Array<{ case_id: number; broker_id: string; reason: string }>;
+  failed: Array<{ case_id: number; broker_id: string; error: string }>;
+  summary: { total: number; sent: number; skipped: number; failed: number };
+}
+
+export async function sendAllDrafts(opts: { live?: boolean; profileId?: number } = {}): Promise<SendDraftsResponse> {
+  const base = await apiBase();
+  const body: Record<string, unknown> = { live: opts.live ?? false };
+  if (opts.profileId !== undefined) body.profile_id = opts.profileId;
+  const res = await fetch(`${base}/cases/send-drafts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`POST /cases/send-drafts failed: ${res.status} — ${text}`);
+  }
+  return (await res.json()) as SendDraftsResponse;
+}
+
 export async function getCase(id: number): Promise<CaseDetail> {
   const base = await apiBase();
   const res = await fetch(`${base}/cases/${id}`);

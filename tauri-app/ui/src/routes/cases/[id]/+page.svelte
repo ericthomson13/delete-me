@@ -4,6 +4,7 @@
   import {
     getCase,
     listCaseAudits,
+    listPresenceResults,
     runAudit,
     buildEvidence,
     evidenceDownloadUrl,
@@ -12,14 +13,24 @@
     type AuditRow,
     type AutomationResult,
     type CaseStatus,
+    type PresenceResult,
   } from '$lib/api';
 
   const caseId = $derived(Number(page.params.id));
 
   let caseData = $state<CaseDetail | null>(null);
   let audits = $state<AuditRow[]>([]);
+  let presenceForBroker = $state<PresenceResult[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
+
+  // Pick the most-recent FOUND row for the case's broker, if any. Use it to
+  // surface "we confirmed you were listed on DATE" before the audit table.
+  let presenceConfirmation = $derived(
+    presenceForBroker
+      .filter((r) => r.found)
+      .sort((a, b) => (b.checked_at ?? '').localeCompare(a.checked_at ?? ''))[0] ?? null,
+  );
 
   let auditing = $state(false);
   let auditError = $state<string | null>(null);
@@ -37,6 +48,12 @@
       const [c, a] = await Promise.all([getCase(caseId), listCaseAudits(caseId)]);
       caseData = c;
       audits = a;
+      // Fetch presence rows for this broker scoped to the case's profile, if any.
+      try {
+        presenceForBroker = await listPresenceResults(c.profile_id, c.broker_id);
+      } catch {
+        presenceForBroker = [];
+      }
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     } finally {
@@ -222,6 +239,17 @@
         </p>
       {/if}
     </section>
+
+    {#if presenceConfirmation}
+      <div class="callout pos">
+        Pre-send presence-check confirmed this consumer was listed on
+        <strong>{(presenceConfirmation.checked_at ?? '').slice(0, 10)}</strong>
+        (source: <code>{presenceConfirmation.source}</code>).
+        {#if presenceConfirmation.listings_url}
+          <a href={presenceConfirmation.listings_url} target="_blank" rel="noopener">listing ↗</a>
+        {/if}
+      </div>
+    {/if}
 
     <section>
       <div class="section-head">

@@ -28,13 +28,13 @@ its own state and fetches from the sidecar via `ui/src/lib/api.ts`.
 
 | Route        | Purpose                                                                                          |
 |--------------|--------------------------------------------------------------------------------------------------|
-| `/`          | Case list — every deletion case with status, broker, sent date                                  |
+| `/`          | Case list — every deletion case + "Send all drafts" bulk action (dry-run or live)              |
 | `/profiles`  | People CRUD — add/edit consumer profiles                                                        |
 | `/brokers`   | Broker registry browser with tier + automation + DROP + agent filters                           |
-| `/discovery` | Presence-check + breach-check + password-check (k-anonymity) for the selected profile; per-row "Create case" CTA on found brokers, or a link to the existing case if one exists |
+| `/discovery` | Presence-check + breach-check + password-check (k-anonymity); hydrates last-stored presence rows on profile change; per-row "Create case" CTA on found brokers, plus a bulk "Draft cases for all found" button |
 | `/audits`    | Cross-case audit log with status filters and text search                                        |
 | `/evidence`  | Cross-case evidence packages with on-disk indicator and direct .zip download                    |
-| `/cases/[id]`| Case detail — letter, audits, automation, evidence build/download, send                         |
+| `/cases/[id]`| Case detail — letter, audits, automation, evidence build/download, send. Shows a "Pre-send presence-check confirmed listing on YYYY-MM-DD" badge when a found-row exists for the case's broker |
 
 The FastAPI service itself still lives at `service/` in the repo root; the
 sidecar entry is `service/sidecar_entry.py`.

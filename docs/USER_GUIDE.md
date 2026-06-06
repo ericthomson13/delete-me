@@ -359,6 +359,17 @@ curl -X POST http://localhost:8080/passwords/check \
     -H "content-type: application/json" \
     -d '{"password": "hunter2"}'
 # {"breach_count": 65744, "found": true}
+
+# Close the loop in one shot — draft a case per broker where the latest
+# presence-check has you listed:
+curl -X POST http://localhost:8080/profiles/1/cases-from-presence
+# {"profile_id": 1, "rows": [{"broker_id": "spokeo", "action": "created", ...}, ...], "summary": {...}}
+
+# Bulk-send every drafted case (optionally scope by profile_id):
+curl -X POST http://localhost:8080/cases/send-drafts \
+    -H "content-type: application/json" \
+    -d '{"live": false}'
+# {"sent": [...], "failed": [...], "summary": {"total": 3, "sent": 3, ...}}
 ```
 
 ### 10. Locking down the service (remote clients)

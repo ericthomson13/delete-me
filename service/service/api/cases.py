@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from delete_me.cases import case_as_dict, draft_case, list_cases, send_case
-from delete_me.db import Case, Profile
+from delete_me.db import Case, CaseStatus, Profile
 from delete_me.transport import PostmarkTransport
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from ._deps import get_session
 
@@ -19,6 +19,11 @@ class CaseDraftIn(BaseModel):
 
 class SendIn(BaseModel):
     live: bool = False
+
+
+class SendDraftsIn(BaseModel):
+    live: bool = False
+    profile_id: int | None = None
 
 
 @router.post("")
@@ -56,6 +61,57 @@ def get_case(case_id: int, session: Session = Depends(get_session)) -> dict:
     out = case_as_dict(case)
     out["letter_markdown"] = case.letter_markdown
     return out
+
+
+@router.post("/send-drafts")
+def send_all_drafts(
+    payload: SendDraftsIn,
+    session: Session = Depends(get_session),
+) -> dict:
+    """Bulk-send every case in DRAFT status, optionally scoped to one profile.
+
+    Mirrors `delete-me send --all-drafts`. Per-case failures (e.g.,
+    web-form-only brokers that can't be email-sent) are recorded without
+    aborting the batch.
+    """
+    stmt = select(Case).where(Case.status == CaseStatus.DRAFT).order_by(Case.id)
+    if payload.profile_id is not None:
+        stmt = stmt.where(Case.profile_id == payload.profile_id)
+    targets = list(session.exec(stmt))
+
+    transport = PostmarkTransport()
+    sent_rows: list[dict] = []
+    skipped_rows: list[dict] = []
+    failed_rows: list[dict] = []
+
+    for case in targets:
+        try:
+            result = send_case(session, case, transport, live=payload.live)
+        except ValueError as exc:
+            failed_rows.append({
+                "case_id": case.id,
+                "broker_id": case.broker_id,
+                "error": str(exc),
+            })
+            continue
+        sent_rows.append({
+            "case_id": case.id,
+            "broker_id": case.broker_id,
+            "dry_run": result.dry_run,
+            "case": case_as_dict(case),
+        })
+
+    return {
+        "sent": sent_rows,
+        "skipped": skipped_rows,
+        "failed": failed_rows,
+        "summary": {
+            "total": len(targets),
+            "sent": len(sent_rows),
+            "skipped": len(skipped_rows),
+            "failed": len(failed_rows),
+        },
+    }
 
 
 @router.post("/{case_id}/send")

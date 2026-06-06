@@ -303,6 +303,116 @@ def test_breach_check_with_mock_provider(client: TestClient, monkeypatch):
     assert rows[0]["breach_name"] == "Adobe"
 
 
+def test_cases_from_presence_drafts_for_found_brokers(client: TestClient, monkeypatch):
+    """Seed PresenceResult rows, then POST and assert cases get drafted."""
+    monkeypatch.setenv("DELETE_ME_AUDIT_USE_MOCK", "1")
+    profile_id = _seed_profile(client)
+
+    # Seed via direct ORM access — the service uses the same DB url.
+    from datetime import UTC, datetime
+
+    from delete_me.db import PresenceResult
+    from delete_me.db.session import get_session as _get_session
+
+    with _get_session() as session:
+        for broker_id in ("spokeo", "mylife"):
+            session.add(PresenceResult(
+                profile_id=profile_id, broker_id=broker_id, source=f"{broker_id}_search",
+                checked_at=datetime.now(UTC), found=True, inconclusive=False,
+            ))
+        # whitepages: not found → shouldn't be drafted
+        session.add(PresenceResult(
+            profile_id=profile_id, broker_id="whitepages", source="whitepages_search",
+            checked_at=datetime.now(UTC), found=False, inconclusive=False,
+        ))
+        session.commit()
+
+    r = client.post(f"/profiles/{profile_id}/cases-from-presence")
+    assert r.status_code == 200, r.text
+    payload = r.json()
+    created_brokers = {row["broker_id"] for row in payload["rows"] if row["action"] == "created"}
+    assert created_brokers == {"spokeo", "mylife"}
+    assert payload["summary"]["created"] == 2
+
+
+def test_cases_from_presence_skips_existing_cases(client: TestClient, monkeypatch):
+    monkeypatch.setenv("DELETE_ME_AUDIT_USE_MOCK", "1")
+    profile_id = _seed_profile(client)
+
+    # Pre-create a case for spokeo
+    r = client.post("/cases", json={"profile_id": profile_id, "broker_id": "spokeo"})
+    assert r.status_code == 200, r.text
+
+    # Seed a found PresenceResult for the same broker
+    from datetime import UTC, datetime
+
+    from delete_me.db import PresenceResult
+    from delete_me.db.session import get_session as _get_session
+
+    with _get_session() as session:
+        session.add(PresenceResult(
+            profile_id=profile_id, broker_id="spokeo", source="spokeo_search",
+            checked_at=datetime.now(UTC), found=True, inconclusive=False,
+        ))
+        session.commit()
+
+    r = client.post(f"/profiles/{profile_id}/cases-from-presence")
+    assert r.status_code == 200
+    actions = {row["broker_id"]: row["action"] for row in r.json()["rows"]}
+    assert actions == {"spokeo": "skipped_existing"}
+
+
+def test_send_drafts_iterates_every_draft(client: TestClient, monkeypatch):
+    monkeypatch.setenv("DELETE_ME_AUDIT_USE_MOCK", "1")
+    profile_id = _seed_profile(client)
+    for broker_id in ("spokeo", "intelius", "mylife"):
+        r = client.post("/cases", json={"profile_id": profile_id, "broker_id": broker_id})
+        assert r.status_code == 200, r.text
+
+    r = client.post("/cases/send-drafts", json={"live": False})
+    assert r.status_code == 200, r.text
+    payload = r.json()
+    assert payload["summary"]["total"] == 3
+    assert payload["summary"]["sent"] == 3
+
+
+def test_send_drafts_filtered_by_profile_id(client: TestClient, monkeypatch):
+    monkeypatch.setenv("DELETE_ME_AUDIT_USE_MOCK", "1")
+    jane_id = _seed_profile(client, email="jane@example.com")
+    bob_id = client.post(
+        "/profiles",
+        json={
+            "full_legal_name": "Bob T. Tester",
+            "current_address": "456 Pine Rd, Salem, OR 97301",
+            "email": "bob@example.com",
+        },
+    ).json()["id"]
+
+    client.post("/cases", json={"profile_id": jane_id, "broker_id": "spokeo"})
+    client.post("/cases", json={"profile_id": bob_id, "broker_id": "mylife"})
+
+    r = client.post("/cases/send-drafts", json={"live": False, "profile_id": jane_id})
+    assert r.status_code == 200
+    payload = r.json()
+    assert payload["summary"]["total"] == 1
+    assert payload["sent"][0]["broker_id"] == "spokeo"
+
+
+def test_send_drafts_failure_doesnt_abort_batch(client: TestClient, monkeypatch):
+    monkeypatch.setenv("DELETE_ME_AUDIT_USE_MOCK", "1")
+    profile_id = _seed_profile(client)
+    # spokeo has email opt-out; whitepages is web-form-only → fails send_case
+    client.post("/cases", json={"profile_id": profile_id, "broker_id": "spokeo"})
+    client.post("/cases", json={"profile_id": profile_id, "broker_id": "whitepages"})
+
+    r = client.post("/cases/send-drafts", json={"live": False})
+    assert r.status_code == 200
+    payload = r.json()
+    assert payload["summary"]["sent"] == 1
+    assert payload["summary"]["failed"] == 1
+    assert payload["failed"][0]["broker_id"] == "whitepages"
+
+
 def test_list_all_audits_aggregates_across_cases(client: TestClient, monkeypatch):
     """GET /audits returns rows with case + broker context, no per-case filter."""
     monkeypatch.setenv("DELETE_ME_AUDIT_USE_MOCK", "1")

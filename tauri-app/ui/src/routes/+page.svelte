@@ -1,20 +1,46 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { listCases, type CaseRow } from '$lib/api';
+  import { listCases, sendAllDrafts, type CaseRow, type SendDraftsResponse } from '$lib/api';
 
   let cases = $state<CaseRow[]>([]);
   let error = $state<string | null>(null);
   let loading = $state(true);
 
+  // Bulk "Send all drafts" state
+  let sending = $state(false);
+  let sendError = $state<string | null>(null);
+  let sendResult = $state<SendDraftsResponse | null>(null);
+  let liveSend = $state(false);
+
+  let draftCount = $derived(cases.filter((c) => c.status === 'draft').length);
+
+  async function refresh() {
+    cases = await listCases();
+  }
+
   onMount(async () => {
     try {
-      cases = await listCases();
+      await refresh();
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     } finally {
       loading = false;
     }
   });
+
+  async function onSendAllDrafts() {
+    sendError = null;
+    sendResult = null;
+    sending = true;
+    try {
+      sendResult = await sendAllDrafts({ live: liveSend });
+      await refresh();
+    } catch (e) {
+      sendError = e instanceof Error ? e.message : String(e);
+    } finally {
+      sending = false;
+    }
+  }
 </script>
 
 <main>
@@ -28,8 +54,36 @@
   {:else if error}
     <p class="error">{error}</p>
   {:else if cases.length === 0}
-    <p class="empty">No cases yet. Draft one with <code>delete-me draft</code>.</p>
+    <p class="empty">No cases yet. Draft one with <code>delete-me case-create</code> or from the Discovery page.</p>
   {:else}
+    {#if draftCount > 0}
+      <div class="bulk-action">
+        <button class="primary" onclick={onSendAllDrafts} disabled={sending}>
+          {sending ? 'Sending…' : `${liveSend ? 'Live-send' : 'Dry-run'} all ${draftCount} drafts`}
+        </button>
+        <label class="checkbox">
+          <input type="checkbox" bind:checked={liveSend} />
+          live (requires POSTMARK_SERVER_TOKEN)
+        </label>
+      </div>
+      {#if sendError}
+        <div class="callout neg">{sendError}</div>
+      {/if}
+      {#if sendResult}
+        <div class="callout {sendResult.summary.failed > 0 ? 'warn' : 'pos'}">
+          <strong>{sendResult.summary.sent}</strong> sent ·
+          <strong>{sendResult.summary.failed}</strong> failed
+          {#if sendResult.summary.failed > 0}
+            <ul>
+              {#each sendResult.failed as f}
+                <li><code>{f.broker_id}</code>: {f.error}</li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+      {/if}
+    {/if}
+
     <table>
       <thead>
         <tr>
@@ -91,4 +145,45 @@
   }
   .error { color: var(--error); }
   code { background: var(--bg-elevated); padding: 0.1rem 0.3rem; border-radius: var(--radius-sm); }
+
+  .bulk-action {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--fg-muted);
+    font-size: 0.88rem;
+  }
+  button.primary {
+    padding: 0.4rem 1rem;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  button.primary:hover:not(:disabled) { background: var(--accent-strong); }
+  button.primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .callout {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+  }
+  .callout.pos { border-color: rgba(26, 127, 55, 0.4); background: rgba(26, 127, 55, 0.08); }
+  .callout.neg { border-color: rgba(207, 34, 46, 0.4); background: rgba(207, 34, 46, 0.08); }
+  .callout.warn { border-color: rgba(214, 145, 36, 0.4); background: rgba(214, 145, 36, 0.08); }
+  .callout ul { margin: 0.5rem 0 0; padding-left: 1.25rem; }
 </style>

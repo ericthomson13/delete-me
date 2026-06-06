@@ -1,18 +1,22 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import {
+    casesFromPresence,
     checkPassword,
     createCase,
     listBreachProviders,
     listCases,
+    listPresenceResults,
     listProfiles,
     runBreachCheck,
     runPresenceCheck,
     type BreachCheckResponse,
     type BreachProvidersResponse,
     type CaseRow,
+    type CasesFromPresenceResponse,
     type PasswordCheckResponse,
     type PresenceCheckResponse,
+    type PresenceResult,
     type ProfileRow,
   } from '$lib/api';
 
@@ -49,6 +53,11 @@
   let creatingFor = $state<Record<string, boolean>>({});
   let createError = $state<Record<string, string>>({});
 
+  // Bulk "Create cases for all found" state
+  let bulkCreating = $state(false);
+  let bulkResult = $state<CasesFromPresenceResponse | null>(null);
+  let bulkError = $state<string | null>(null);
+
   let selectedProfile = $derived(profiles.find((p) => p.id === profileId) ?? null);
 
   onMount(async () => {
@@ -65,14 +74,18 @@
     }
   });
 
-  // Re-fetch cases whenever the active profile changes.
+  // Re-fetch cases AND stored presence results whenever the active profile
+  // changes. Stored presence results hydrate the table so the user sees
+  // history without re-running.
   $effect(() => {
     const pid = profileId;
     if (pid === null) {
       casesByBroker = {};
+      presence = null;
       return;
     }
     void refreshCasesForProfile(pid);
+    void hydratePresenceFromStored(pid);
   });
 
   async function refreshCasesForProfile(pid: number) {
@@ -90,6 +103,44 @@
     }
   }
 
+  async function hydratePresenceFromStored(pid: number) {
+    try {
+      const rows = await listPresenceResults(pid);
+      if (rows.length === 0) {
+        presence = null;
+        return;
+      }
+      // Build a PresenceCheckResponse-shaped object from stored rows. The
+      // template renders this identically to a fresh run.
+      const real = rows.filter((r) => r.source !== '(none)');
+      const summary = {
+        found: real.filter((r) => r.found).length,
+        not_found: real.filter((r) => !r.found && !r.inconclusive).length,
+        inconclusive: real.filter((r) => r.inconclusive).length,
+        no_audit_source_configured: rows.filter((r) => r.source === '(none)').length,
+        brokers_checked: new Set(rows.map((r) => r.broker_id)).size,
+      };
+      presence = { results: rows as PresenceResult[], summary };
+    } catch (e) {
+      console.error('listPresenceResults failed', e);
+    }
+  }
+
+  // Most recent checked_at across the rendered presence rows.
+  let lastCheckedAt = $derived(
+    presence && presence.results.length
+      ? presence.results.reduce<string | null>(
+          (acc, r) => (r.checked_at && (!acc || r.checked_at > acc) ? r.checked_at : acc),
+          null,
+        )
+      : null,
+  );
+
+  function shortDate(iso: string | null): string {
+    if (!iso) return '—';
+    return iso.slice(0, 10);
+  }
+
   async function onRunPresence() {
     if (profileId === null) return;
     presenceError = null;
@@ -100,6 +151,22 @@
       presenceError = e instanceof Error ? e.message : String(e);
     } finally {
       presenceRunning = false;
+    }
+  }
+
+  async function onBulkCreate() {
+    if (profileId === null) return;
+    bulkError = null;
+    bulkResult = null;
+    bulkCreating = true;
+    try {
+      bulkResult = await casesFromPresence(profileId);
+      // Refresh the per-row map so each row's CTA updates to the new case.
+      await refreshCasesForProfile(profileId);
+    } catch (e) {
+      bulkError = e instanceof Error ? e.message : String(e);
+    } finally {
+      bulkCreating = false;
     }
   }
 
@@ -198,9 +265,14 @@
     <section>
       <div class="section-head">
         <h2>Presence-check</h2>
-        <button class="primary" onclick={onRunPresence} disabled={presenceRunning || profileId === null}>
-          {presenceRunning ? 'Checking…' : 'Run presence-check'}
-        </button>
+        <div class="head-actions">
+          {#if lastCheckedAt}
+            <span class="muted">Last checked {shortDate(lastCheckedAt)}</span>
+          {/if}
+          <button class="primary" onclick={onRunPresence} disabled={presenceRunning || profileId === null}>
+            {presenceRunning ? 'Checking…' : presence ? 'Re-run' : 'Run presence-check'}
+          </button>
+        </div>
       </div>
 
       {#if presenceError}
@@ -275,6 +347,32 @@
             Brokers without an audit source can't be presence-checked. Coverage
             grows as adapters are added.
           </p>
+        {/if}
+
+        {#if presence.summary.found > 0}
+          <div class="bulk-action">
+            <button class="primary" onclick={onBulkCreate} disabled={bulkCreating || profileId === null}>
+              {bulkCreating ? 'Drafting…' : `Draft cases for all ${presence.summary.found} found brokers`}
+            </button>
+            <span class="muted">Skips brokers that already have a case.</span>
+          </div>
+          {#if bulkError}
+            <div class="callout neg">{bulkError}</div>
+          {/if}
+          {#if bulkResult}
+            <div class="callout {bulkResult.summary.failed > 0 ? 'warn' : 'pos'}">
+              <strong>{bulkResult.summary.created}</strong> drafted ·
+              <strong>{bulkResult.summary.skipped_existing}</strong> skipped (existing) ·
+              <strong>{bulkResult.summary.failed}</strong> failed
+              {#if bulkResult.summary.failed > 0}
+                <ul>
+                  {#each bulkResult.rows.filter((r) => r.action === 'failed') as r}
+                    <li><code>{r.broker_id}</code>: {r.error}</li>
+                  {/each}
+                </ul>
+              {/if}
+            </div>
+          {/if}
         {/if}
       {/if}
     </section>
@@ -578,6 +676,20 @@
     border: 1px solid var(--border);
     border-radius: 5px;
     font-size: 0.95rem;
+  }
+
+  .bulk-action {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .head-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.88rem;
   }
 
   .link-button {
