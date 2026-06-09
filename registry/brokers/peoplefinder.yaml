@@ -20,7 +20,7 @@ re_aggregation_days: 45
 audit_sources:
   - peoplefinder_search
 audit_sources_last_pass:
-  peoplefinder_search: 2026-06-02
+  peoplefinder_search: 2026-06-09
 statutes:
   - ccpa_1798_105
   - ca_delete_act
