@@ -28,4 +28,4 @@ notes: |
 automation:
   tier: auto
   script: checkpeople.py
-  last_automation_pass: 2026-06-29
+  last_automation_pass: 2026-07-06
