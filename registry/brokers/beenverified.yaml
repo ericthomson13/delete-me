@@ -22,7 +22,7 @@ re_aggregation_days: 45
 audit_sources:
   - beenverified_search
 audit_sources_last_pass:
-  beenverified_search: 2026-06-30
+  beenverified_search: 2026-07-07
 statutes:
   - ccpa_1798_105
   - ca_delete_act
