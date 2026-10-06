@@ -20,7 +20,7 @@ re_aggregation_days: 60
 audit_sources:
   - radaris_search
 audit_sources_last_pass:
-  radaris_search: 2026-09-29
+  radaris_search: 2026-10-06
 statutes:
   - ccpa_1798_105
   - ca_delete_act
